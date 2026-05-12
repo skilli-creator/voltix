@@ -16,7 +16,9 @@ class Database:
                 host=Config.DB_HOST,
                 user=Config.DB_USER,
                 password=Config.DB_PASSWORD,
-                database=Config.DB_NAME
+                database=Config.DB_NAME,
+                consume_results=True,  # Prevents "Unread result found" errors
+                autocommit=False
             )
             return self.connection
         except Error as e:
@@ -27,6 +29,14 @@ class Database:
         conn = self.get_connection()
         if conn:
             print("✅ Database connected successfully!")
+            # Consume any pending results before closing
+            try:
+                cursor = conn.cursor()
+                cursor.execute("SELECT 1")
+                cursor.fetchall()  # Consume all results
+                cursor.close()
+            except:
+                pass
             conn.close()
             return True
         else:
@@ -63,24 +73,38 @@ class Database:
             return None
         
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return user
+        try:
+            cursor.execute("SELECT * FROM users WHERE email = %s", (email,))
+            user = cursor.fetchone()
+            # Consume any remaining results
+            cursor.fetchall()
+            return user
+        except Error as e:
+            print(f"Get user by email error: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
     
-    def get_user_by_phone(self, phone):  # <-- ADD THIS METHOD
+    def get_user_by_phone(self, phone):
         """Get user by phone number"""
         conn = self.get_connection()
         if not conn:
             return None
         
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM users WHERE phone = %s", (phone,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return user
+        try:
+            cursor.execute("SELECT * FROM users WHERE phone = %s", (phone,))
+            user = cursor.fetchone()
+            # Consume any remaining results
+            cursor.fetchall()
+            return user
+        except Error as e:
+            print(f"Get user by phone error: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
     
     def get_user_by_id(self, user_id):
         conn = self.get_connection()
@@ -88,11 +112,18 @@ class Database:
             return None
         
         cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT id, email, first_name, last_name, phone, email_verified, is_active FROM users WHERE id = %s", (user_id,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-        return user
+        try:
+            cursor.execute("SELECT id, email, first_name, last_name, phone, email_verified, is_active FROM users WHERE id = %s", (user_id,))
+            user = cursor.fetchone()
+            # Consume any remaining results
+            cursor.fetchall()
+            return user
+        except Error as e:
+            print(f"Get user by ID error: {e}")
+            return None
+        finally:
+            cursor.close()
+            conn.close()
     
     def update_last_login(self, user_id):
         conn = self.get_connection()
@@ -100,11 +131,16 @@ class Database:
             return False
         
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET last_login = NOW() WHERE id = %s", (user_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return True
+        try:
+            cursor.execute("UPDATE users SET last_login = NOW() WHERE id = %s", (user_id,))
+            conn.commit()
+            return True
+        except Error as e:
+            print(f"Update last login error: {e}")
+            return False
+        finally:
+            cursor.close()
+            conn.close()
     
     def update_email_verified(self, user_id):
         conn = self.get_connection()
@@ -112,11 +148,16 @@ class Database:
             return False
         
         cursor = conn.cursor()
-        cursor.execute("UPDATE users SET email_verified = 1 WHERE id = %s", (user_id,))
-        conn.commit()
-        cursor.close()
-        conn.close()
-        return True
+        try:
+            cursor.execute("UPDATE users SET email_verified = 1 WHERE id = %s", (user_id,))
+            conn.commit()
+            return True
+        except Error as e:
+            print(f"Update email verified error: {e}")
+            return False
+        finally:
+            cursor.close()
+            conn.close()
     
     # ==================== VERIFICATION CODE FUNCTIONS ====================
     
@@ -153,6 +194,8 @@ class Database:
         try:
             cursor.execute("SELECT verification_code, code_expires_at FROM users WHERE id = %s", (user_id,))
             user = cursor.fetchone()
+            # Consume any remaining results
+            cursor.fetchall()
             
             if not user:
                 return False

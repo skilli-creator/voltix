@@ -1,4 +1,4 @@
-# backend/routes/bot_routes.py
+# backend/routes/dbot_routes.py
 from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.database import db
@@ -7,6 +7,11 @@ import threading
 import time
 import json
 import websocket
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 bot_bp = Blueprint('bot', __name__)
 
@@ -16,36 +21,44 @@ active_bots = {}
 
 def tick_over_under_strategy(ticks):
     """
-    Over/Under trading strategy based on last 5 ticks
+    Advanced Over/Under trading strategy based on digit analysis + momentum
     Returns: "OVER", "UNDER", or "NO TRADE"
     """
-    if len(ticks) < 5:
+    if len(ticks) < 10:
         return "NO TRADE"
 
-    last = ticks[-5:]
+    # Extract last digits from ticks
+    last_digits = []
+    for tick in ticks:
+        price_str = str(tick)
+        if '.' in price_str:
+            digit = int(price_str.split('.')[-1][-1])
+        else:
+            digit = int(str(tick)[-1])
+        last_digits.append(digit)
 
-    changes = [last[i] - last[i-1] for i in range(1, len(last))]
+    recent = last_digits[-10:]
 
-    momentum = sum(changes)
+    low_digits = sum(1 for d in recent if d <= 4)
+    high_digits = sum(1 for d in recent if d >= 5)
 
-    up_moves = sum(1 for c in changes if c > 0)
-    down_moves = sum(1 for c in changes if c < 0)
+    # Calculate momentum from last 5 prices
+    last_prices = ticks[-5:]
+    momentum = sum([last_prices[i] - last_prices[i-1] for i in range(1, 5)])
 
-    volatility = max(last) - min(last)
-
-    # OVER condition
-    if momentum > 0 and up_moves >= 3 and volatility < 1.0:
+    # OVER condition: low digits dominant + positive momentum
+    if low_digits >= 7 and momentum >= 0:
         return "OVER"
 
-    # UNDER condition
-    elif momentum < 0 and down_moves >= 3 and volatility < 1.0:
+    # UNDER condition: high digits dominant + negative momentum
+    elif high_digits >= 7 and momentum <= 0:
         return "UNDER"
 
     return "NO TRADE"
 
 
 def fetch_real_ticks(api_token, symbol, count=10):
-    """Fetch real ticks from Deriv WebSocket"""
+    """Fetch real ticks from Deriv WebSocket with authorization"""
     result = {"success": False, "ticks": [], "error": None}
     response_received = threading.Event()
     
@@ -62,6 +75,9 @@ def fetch_real_ticks(api_token, symbol, count=10):
             ws.close()
     
     def on_open(ws):
+        # First authorize
+        ws.send(json.dumps({"authorize": api_token}))
+        # Then request ticks history
         ws.send(json.dumps({
             "ticks_history": symbol,
             "adjust_start_time": 1,
@@ -77,11 +93,19 @@ def fetch_real_ticks(api_token, symbol, count=10):
     wst.start()
     
     response_received.wait(timeout=10)
+    
+    # Clean up
+    if not result["success"]:
+        try:
+            ws.close()
+        except:
+            pass
+    
     return result
 
 
 def fetch_current_price(api_token, symbol):
-    """Fetch current price from Deriv WebSocket"""
+    """Fetch current price from Deriv WebSocket with authorization"""
     result = {"success": False, "price": None, "error": None}
     response_received = threading.Event()
     
@@ -98,12 +122,12 @@ def fetch_current_price(api_token, symbol):
             ws.close()
     
     def on_open(ws):
+        # First authorize
+        ws.send(json.dumps({"authorize": api_token}))
+        # Then subscribe to ticks
         ws.send(json.dumps({
-            "ticks_history": symbol,
-            "adjust_start_time": 1,
-            "count": 1,
-            "end": "latest",
-            "style": "ticks"
+            "ticks": symbol,
+            "subscribe": 1
         }))
     
     ws_url = f"wss://ws.derivws.com/websockets/v3?app_id=1089"
@@ -113,6 +137,14 @@ def fetch_current_price(api_token, symbol):
     wst.start()
     
     response_received.wait(timeout=10)
+    
+    # Clean up
+    if not result["success"]:
+        try:
+            ws.close()
+        except:
+            pass
+    
     return result
 
 
@@ -132,18 +164,29 @@ class TradingBot:
         self.thread = threading.Thread(target=self._run)
         self.thread.daemon = True
         self.thread.start()
+        logger.info(f"[BOT] Bot started for user {self.user_id}")
         
     def stop(self):
         self.is_running = False
+        logger.info(f"[BOT] Bot stopped for user {self.user_id}")
+        
+    def _check_balance(self):
+        """Check if balance is sufficient"""
+        success, balance, currency, _ = DerivService.get_balance(self.api_token)
+        if success and balance < float(self.config.get('stake', 1.5)):
+            logger.warning(f"[BOT] Low balance: ${balance:.2f}")
+            return False, balance
+        return True, balance if success else 0
         
     def _get_over_under_signal(self):
-        """Get OVER/UNDER signal based on real tick data"""
+        """Get OVER/UNDER signal based on real tick data using digit-based strategy"""
         symbol = self.config.get('market')
         
         # Fetch real ticks
         result = fetch_real_ticks(self.api_token, symbol, count=10)
         
         if not result["success"] or not result["ticks"]:
+            logger.warning("[BOT] Failed to fetch ticks for Over/Under")
             return "NO TRADE"
         
         ticks = result["ticks"]
@@ -173,6 +216,7 @@ class TradingBot:
             signal = "RISE"
         
         self._last_price = current_price
+        logger.info(f"[BOT] Rise/Fall signal: {signal} (Price: {current_price})")
         return signal
     
     def _get_higher_lower_signal(self):
@@ -187,30 +231,40 @@ class TradingBot:
         current_price = price_result["price"]
         barrier = self.config.get('barrier', current_price)
         
-        return "HIGHER" if current_price > barrier else "LOWER"
+        signal = "HIGHER" if current_price > barrier else "LOWER"
+        logger.info(f"[BOT] Higher/Lower signal: {signal} (Price: {current_price}, Barrier: {barrier})")
+        return signal
     
     def _determine_trade_direction(self):
-        """Determine trade direction based on trade type"""
+        """Determine trade direction based on trade type and user choice"""
         trade_type = self.config.get('trade_type')
         
         if trade_type == 'Over/Under':
             signal = self._get_over_under_signal()
-            # Map signal to Deriv trade type
-            if signal == "OVER":
+            user_choice = self.config.get('over_under_choice')
+            
+            logger.info(f"[BOT] Over/Under - Signal: {signal}, User Choice: {user_choice}")
+            
+            # Only trade if signal matches user choice
+            if signal == "OVER" and user_choice == "over1":
                 return "CALL"
-            elif signal == "UNDER":
+            elif signal == "UNDER" and user_choice == "under8":
                 return "PUT"
             else:
-                return None  # No trade
+                return None  # No trade - wait for matching signal
+                
         elif trade_type == 'Rise/Fall':
             signal = self._get_rise_fall_signal()
             return "CALL" if signal == "RISE" else "PUT"
+            
         elif trade_type == 'Higher/Lower':
             signal = self._get_higher_lower_signal()
             return "CALL" if signal == "HIGHER" else "PUT"
+            
         elif trade_type == 'Even/Odd':
             # For Even/Odd, return direction based on digit analysis
             return "CALL"  # Will be implemented later
+            
         elif trade_type == 'Matches/Differs':
             return "CALL"  # Will be implemented later
         
@@ -231,13 +285,23 @@ class TradingBot:
                 break
             
             try:
+                # Check balance before each trade
+                sufficient, balance = self._check_balance()
+                if not sufficient:
+                    logger.warning(f"[BOT] Insufficient balance: ${balance:.2f}. Stopping bot.")
+                    self.stop()
+                    break
+                
                 # Get trade direction based on strategy
                 direction = self._determine_trade_direction()
                 
                 # Skip if no trade signal (for Over/Under)
                 if direction is None:
-                    time.sleep(5)
+                    logger.info("[BOT] No trade signal, waiting...")
+                    time.sleep(1)
                     continue
+                
+                logger.info(f"[BOT] Trade {self.trades_executed + 1}/{loops if loops < 999 else '∞'} - Direction: {direction}, Stake: ${stake}")
                 
                 # Map direction to Deriv trade type (CALL/PUT)
                 trade_type_deriv = direction if direction in ['CALL', 'PUT'] else ('CALL' if direction in ['RISE', 'HIGHER'] else 'PUT')
@@ -265,26 +329,31 @@ class TradingBot:
                         if success_info:
                             profit = contract_info.get('profit', 0)
                             self.current_profit += profit
+                            logger.info(f"[BOT] Trade result - Profit: ${profit:.2f}, Total Profit: ${self.current_profit:.2f}")
                             
                             if martingale and profit < 0:
                                 stake = min(stake * 2, 100)
+                                logger.info(f"[BOT] Martingale - New stake: ${stake}")
                             else:
                                 stake = float(self.config.get('stake', 1.5))
                     
+                    # Check take profit / stop loss
                     if tp and self.current_profit >= tp:
+                        logger.info(f"[BOT] Take profit reached: ${self.current_profit:.2f} / ${tp}")
                         self.stop()
                         break
                     if sl and self.current_profit <= -sl:
+                        logger.info(f"[BOT] Stop loss hit: ${self.current_profit:.2f} / -${sl}")
                         self.stop()
                         break
                 else:
-                    print(f"Trade failed: {result}")
+                    logger.error(f"[BOT] Trade failed: {result}")
                 
-                time.sleep(5)  # Wait between trades
+                time.sleep(1)  # Wait 1 second between trades (faster for 2-ticks)
                 
             except Exception as e:
-                print(f"Error in bot loop: {e}")
-                time.sleep(5)
+                logger.error(f"[BOT] Error in bot loop: {e}")
+                time.sleep(1)
 
 
 @bot_bp.route('/start', methods=['POST'])
@@ -332,8 +401,8 @@ def start_bot():
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
     # Verify sufficient balance
-    balance_success, balance, currency = DerivService.get_balance(api_token)
-    if balance_success and balance < float(stake):
+    success, balance, currency, _ = DerivService.get_balance(api_token)
+    if success and balance < float(stake):
         return jsonify({'error': f'Insufficient balance. Your balance is ${balance:.2f}'}), 400
     
     config = {
@@ -352,6 +421,8 @@ def start_bot():
     active_bots[user_id] = bot
     bot.start()
     
+    logger.info(f"Bot started for user {user_id} with config: {config}")
+    
     return jsonify({
         'message': 'Bot started successfully',
         'config': config
@@ -369,6 +440,8 @@ def stop_bot():
     
     active_bots[user_id].stop()
     del active_bots[user_id]
+    
+    logger.info(f"Bot stopped for user {user_id}")
     
     return jsonify({'message': 'Bot stopped successfully'}), 200
 
@@ -423,28 +496,37 @@ def get_over_under_analysis():
     ticks = result["ticks"]
     signal = tick_over_under_strategy(ticks)
     
-    # Calculate additional analysis data
+    # Calculate digit analysis for display
+    last_digits = []
+    for tick in ticks:
+        price_str = str(tick)
+        if '.' in price_str:
+            digit = int(price_str.split('.')[-1][-1])
+        else:
+            digit = int(str(tick)[-1])
+        last_digits.append(digit)
+    
+    recent_digits = last_digits[-10:] if len(last_digits) >= 10 else last_digits
+    low_digits = sum(1 for d in recent_digits if d <= 4)
+    high_digits = sum(1 for d in recent_digits if d >= 5)
+    
+    # Calculate momentum
     if len(ticks) >= 5:
-        last = ticks[-5:]
-        changes = [last[i] - last[i-1] for i in range(1, len(last))]
-        momentum = sum(changes)
-        up_moves = sum(1 for c in changes if c > 0)
-        down_moves = sum(1 for c in changes if c < 0)
-        volatility = max(last) - min(last)
+        last_prices = ticks[-5:]
+        momentum = sum([last_prices[i] - last_prices[i-1] for i in range(1, 5)])
     else:
         momentum = 0
-        up_moves = 0
-        down_moves = 0
-        volatility = 0
     
     return jsonify({
         'signal': signal,
         'analysis': {
             'momentum': round(momentum, 4),
-            'up_moves': up_moves,
-            'down_moves': down_moves,
-            'volatility': round(volatility, 4),
-            'last_ticks': ticks[-5:] if len(ticks) >= 5 else ticks
+            'low_digits': low_digits,
+            'high_digits': high_digits,
+            'low_digits_percent': round((low_digits / len(recent_digits)) * 100, 1) if recent_digits else 0,
+            'high_digits_percent': round((high_digits / len(recent_digits)) * 100, 1) if recent_digits else 0,
+            'last_ticks': ticks[-5:] if len(ticks) >= 5 else ticks,
+            'last_digits': recent_digits
         }
     }), 200
 

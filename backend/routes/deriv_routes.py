@@ -3,6 +3,10 @@ from flask import Blueprint, request, jsonify
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.database import db
 from services.deriv_service import DerivService
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 deriv_bp = Blueprint('deriv', __name__)
 
@@ -20,24 +24,26 @@ def connect_deriv():
     if not api_token:
         return jsonify({'error': 'API token required'}), 400
     
-    # Test the connection
-    success, result = DerivService.test_connection(api_token)
-    
-    if not success:
-        return jsonify({'error': result}), 400
-    
-    # Get account info
+    # Get account info directly
     info_success, account_info = DerivService.get_account_info(api_token)
     
     if not info_success:
-        return jsonify({'error': 'Failed to get account info'}), 500
+        return jsonify({'error': 'Failed to get account info. Invalid API token?'}), 400
     
-    # Get balance
-    balance_success, balance, currency = DerivService.get_balance(api_token)
+    # Get balance - uses authorized account directly
+    balance_success, balance, currency, loginid = DerivService.get_balance(api_token)
     
     if not balance_success:
         balance = 0
         currency = 'USD'
+    
+    # Determine account type from loginid
+    if loginid and loginid.startswith('VRTC'):
+        detected_account_type = 'Demo'
+    elif loginid and loginid.startswith('CR'):
+        detected_account_type = 'Real'
+    else:
+        detected_account_type = account_type
     
     # Save to database
     conn = db.get_connection()
@@ -46,33 +52,30 @@ def connect_deriv():
     
     cursor = conn.cursor()
     try:
-        # Check if account already exists
         cursor.execute("""
             SELECT id FROM deriv_accounts WHERE user_id = %s AND account_id = %s
         """, (user_id, account_info['account_id']))
         existing = cursor.fetchone()
         
         if existing:
-            # Update existing record
             cursor.execute("""
                 UPDATE deriv_accounts 
                 SET token = %s, balance = %s, currency = %s, account_type = %s, 
                     email = %s, last_sync_at = NOW()
                 WHERE user_id = %s AND account_id = %s
-            """, (api_token.encode(), balance, currency, account_type, 
+            """, (api_token.encode(), balance, currency, detected_account_type, 
                   account_info['email'], user_id, account_info['account_id']))
         else:
-            # Insert new record
             cursor.execute("""
                 INSERT INTO deriv_accounts (user_id, account_id, email, token, balance, currency, account_type)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             """, (user_id, account_info['account_id'], account_info['email'], 
-                  api_token.encode(), balance, currency, account_type))
+                  api_token.encode(), balance, currency, detected_account_type))
         
         conn.commit()
         
     except Exception as e:
-        print(f"Database error: {e}")
+        logger.error(f"Database error: {e}")
         conn.rollback()
         return jsonify({'error': f'Database error: {str(e)}'}), 500
     finally:
@@ -85,7 +88,7 @@ def connect_deriv():
             'account_id': account_info['account_id'],
             'balance': balance,
             'currency': currency,
-            'account_type': account_type,
+            'account_type': detected_account_type,
             'email': account_info['email']
         }
     }), 200
@@ -94,10 +97,9 @@ def connect_deriv():
 @deriv_bp.route('/balance', methods=['GET'])
 @jwt_required()
 def get_balance():
-    """Get current balance from Deriv"""
+    """Get current balance from Deriv - uses authorized account directly"""
     user_id = get_jwt_identity()
     
-    # Get user's API token from database
     conn = db.get_connection()
     if not conn:
         return jsonify({'error': 'Database error'}), 500
@@ -114,54 +116,53 @@ def get_balance():
     if not account:
         return jsonify({'error': 'No Deriv account connected'}), 404
     
-    # Decode token from bytes to string
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
-    # Get balance from Deriv
-    success, balance, currency = DerivService.get_balance(api_token)
+    success, balance, currency, loginid = DerivService.get_balance(api_token)
     
     if not success:
         return jsonify({'error': balance}), 500
     
+    account_type = 'Demo' if loginid and loginid.startswith('VRTC') else 'Real'
+    
     # Update balance in database
-    conn = db.get_connection()
-    if conn:
-        cursor = conn.cursor()
-        cursor.execute("""
+    conn2 = db.get_connection()
+    if conn2:
+        cursor2 = conn2.cursor()
+        cursor2.execute("""
             UPDATE deriv_accounts SET balance = %s, last_sync_at = NOW() WHERE user_id = %s
         """, (balance, user_id))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        conn2.commit()
+        cursor2.close()
+        conn2.close()
     
     return jsonify({
         'balance': balance,
         'currency': currency,
-        'account_id': account['account_id'],
-        'account_type': account['account_type']
+        'account_id': loginid or account['account_id'],
+        'account_type': account_type
     }), 200
 
 
 @deriv_bp.route('/place-trade', methods=['POST'])
 @jwt_required()
 def place_trade():
-    """Place a manual trade"""
+    """Place a manual trade - uses authorized account directly"""
     user_id = get_jwt_identity()
     data = request.json
     
     symbol = data.get('symbol', '')
-    direction = data.get('direction', '')  # 'Rise' or 'Fall'
+    direction = data.get('direction', '')
     amount = data.get('amount', 0)
     duration = data.get('duration', 1)
-    duration_unit = data.get('duration_unit', 't')  # 't' for ticks, 'm' for minutes
+    duration_unit = data.get('duration_unit', 't')
     
     if not symbol or not direction or not amount:
         return jsonify({'error': 'Symbol, direction, and amount required'}), 400
     
-    if amount < 0.35:
-        return jsonify({'error': 'Minimum stake is $0.35'}), 400
+    if amount < 1.50:
+        return jsonify({'error': 'Minimum stake is $1.50'}), 400
     
-    # Get user's API token
     conn = db.get_connection()
     if not conn:
         return jsonify({'error': 'Database error'}), 500
@@ -178,13 +179,10 @@ def place_trade():
     if not account:
         return jsonify({'error': 'No Deriv account connected'}), 404
     
-    # Decode token from bytes to string
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
-    # Convert direction to Deriv trade type
     trade_type = 'CALL' if direction.lower() == 'rise' else 'PUT'
     
-    # Place trade
     success, result = DerivService.place_trade(
         api_token=api_token,
         symbol=symbol,
@@ -196,6 +194,8 @@ def place_trade():
     
     if not success:
         return jsonify({'error': result}), 500
+    
+    logger.info(f"Trade placed: {direction} on {symbol} for ${amount}")
     
     return jsonify({
         'message': 'Trade placed successfully',
@@ -209,7 +209,6 @@ def get_active_contracts():
     """Get all active contracts (open trades)"""
     user_id = get_jwt_identity()
     
-    # Get user's API token
     conn = db.get_connection()
     if not conn:
         return jsonify({'error': 'Database error'}), 500
@@ -225,7 +224,6 @@ def get_active_contracts():
     if not account:
         return jsonify({'error': 'No Deriv account connected'}), 404
     
-    # Decode token from bytes to string
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
     success, contracts = DerivService.get_active_contracts(api_token)
@@ -242,10 +240,9 @@ def get_active_contracts():
 @deriv_bp.route('/trade-history', methods=['GET'])
 @jwt_required()
 def get_trade_history():
-    """Get trade history from Deriv API (real-time, no storage)"""
+    """Get trade history from Deriv API (real-time)"""
     user_id = get_jwt_identity()
     
-    # Get user's API token from database
     conn = db.get_connection()
     if not conn:
         return jsonify({'error': 'Database error'}), 500
@@ -262,13 +259,10 @@ def get_trade_history():
     if not account:
         return jsonify({'error': 'No Deriv account connected'}), 404
     
-    # Decode token from bytes to string
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
-    # Get limit from query parameter (default 50)
     limit = request.args.get('limit', 50, type=int)
     
-    # Get trade history from Deriv API
     success, history = DerivService.get_trade_history(api_token, limit)
     
     if not success:
@@ -283,10 +277,9 @@ def get_trade_history():
 @deriv_bp.route('/profit-loss', methods=['GET'])
 @jwt_required()
 def get_profit_loss():
-    """Get profit/loss summary from Deriv API (real-time, no storage)"""
+    """Get profit/loss summary from Deriv API"""
     user_id = get_jwt_identity()
     
-    # Get user's API token from database
     conn = db.get_connection()
     if not conn:
         return jsonify({'error': 'Database error'}), 500
@@ -305,7 +298,6 @@ def get_profit_loss():
     
     api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
     
-    # Get trade history and calculate profit/loss
     success, history = DerivService.get_trade_history(api_token, 200)
     
     if not success:
@@ -349,7 +341,7 @@ def disconnect_deriv():
 
 @deriv_bp.route('/test-connect', methods=['POST'])
 def test_connect():
-    """Test Deriv connection without JWT (TEMPORARY - for testing only)"""
+    """Test Deriv connection without JWT (for testing only)"""
     data = request.json
     api_token = data.get('api_token', '').strip()
     account_type = data.get('account_type', 'Demo')
@@ -357,29 +349,25 @@ def test_connect():
     if not api_token:
         return jsonify({'error': 'API token required'}), 400
     
-    print(f"DEBUG: Testing Deriv connection with token: {api_token[:20]}...")
+    logger.info(f"Testing Deriv connection with token: {api_token[:20]}...")
     
-    # Test the connection
-    success, result = DerivService.test_connection(api_token)
-    
-    if not success:
-        print(f"DEBUG: Connection failed: {result}")
-        return jsonify({'error': result}), 400
-    
-    print(f"DEBUG: Connection successful!")
-    
-    # Get account info
     info_success, account_info = DerivService.get_account_info(api_token)
     
     if not info_success:
-        return jsonify({'error': account_info}), 500
+        return jsonify({'error': 'Failed to get account info'}), 500
     
-    # Get balance
-    balance_success, balance, currency = DerivService.get_balance(api_token)
+    balance_success, balance, currency, loginid = DerivService.get_balance(api_token)
     
     if not balance_success:
         balance = 0
         currency = 'USD'
+    
+    if loginid and loginid.startswith('VRTC'):
+        acc_type = 'Demo'
+    elif loginid and loginid.startswith('CR'):
+        acc_type = 'Real'
+    else:
+        acc_type = account_type
     
     return jsonify({
         'message': 'Deriv account connected successfully',
@@ -387,7 +375,8 @@ def test_connect():
             'account_id': account_info['account_id'],
             'balance': balance,
             'currency': currency,
-            'account_type': account_type,
-            'email': account_info['email']
+            'account_type': acc_type,
+            'email': account_info['email'],
+            'trading_account_id': loginid
         }
     }), 200

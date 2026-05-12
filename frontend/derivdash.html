@@ -6,14 +6,12 @@
     <title>Voltix • Automated Trading Terminal</title>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
             background: radial-gradient(circle at 20% 50%, #0a0f1e, #06090f);
             color: #e2e8f0;
             min-height: 100vh;
         }
-
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 10px; }
@@ -31,15 +29,47 @@
             z-index: 100;
         }
         .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, #22c55e, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
-        .account-info { display: flex; gap: 20px; align-items: center; }
+        .account-info { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        .email-display { background: rgba(56, 189, 248, 0.15); padding: 6px 18px; border-radius: 40px; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 13px; }
         .balance-display { background: rgba(34,197,94,0.15); padding: 6px 18px; border-radius: 40px; border: 1px solid rgba(34,197,94,0.3); }
         .balance-value { color: #22c55e; font-weight: 700; }
         .account-badge { background: #1e293b; padding: 4px 14px; border-radius: 20px; font-family: monospace; font-size: 13px; }
-        .logout-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); padding: 6px 18px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
-        .logout-btn:hover { background: #ef4444; color: white; }
+        .withdraw-btn {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .withdraw-btn.disabled {
+            background: #4b5563;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        .withdraw-btn.disabled:hover { transform: none; background: #4b5563; }
+        .withdraw-btn:hover { background: linear-gradient(135deg, #fbbf24, #f59e0b); transform: translateY(-2px); }
+        .logout-btn {
+            background: #ef4444;
+            border: none;
+            padding: 6px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: white;
+            font-weight: 600;
+            font-size: 13px;
+        }
+        .logout-btn:hover { background: #dc2626; transform: translateY(-2px); }
 
         .dashboard { max-width: 1400px; margin: 24px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 24px; }
-
         .card {
             background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(12px);
@@ -211,8 +241,11 @@
 <div class="topbar">
     <div class="logo">⚡ Voltix | Automated Terminal</div>
     <div class="account-info">
+        <div class="email-display" id="derivEmail">📧 loading...</div>
         <div class="balance-display">💰 <span id="balance" class="balance-value">$0.00</span></div>
         <div class="account-badge" id="accountId">---</div>
+        <div class="account-badge" id="accountTypeBadge">---</div>
+        <a href="#" id="withdrawBtn" class="withdraw-btn">💰 Withdraw</a>
         <button class="logout-btn" id="logoutBtn">Logout</button>
     </div>
 </div>
@@ -257,8 +290,8 @@
         <div id="additionalFieldContainer" style="margin-bottom: 16px;"></div>
         <div class="form-grid" style="margin-bottom: 16px;">
             <div class="input-group"><label>🎯 Take Profit ($) - Optional</label><input type="number" id="tp" step="1" placeholder="e.g., 50"></div>
-            <div class="input-group"><label>🛡️ Stop Loss ($) - Optional</label><input type="number" id="sl" step="1" placeholder="e.g., 20"></div>
-            <div class="input-group"><label>🔄 Trade Loops - Optional</label><input type="number" id="loops" placeholder="Number of trades"></div>
+            <div class="input-group"><label>🛡️ Stop Loss ($) - Optional (min 1.5)</label><input type="number" id="sl" step="0.5" min="1.5" placeholder="e.g., 1.5"></div>
+            <div class="input-group"><label>🔄 Trade Loops - Optional (0 = unlimited)</label><input type="number" id="loops" min="0" step="1" placeholder="0 = unlimited"></div>
             <div class="input-group"><label>📈 Martingale (OFF by default)</label>
                 <div style="display: flex; align-items: center; gap: 10px; background:#0f172a; padding: 8px 12px; border-radius: 40px; width: fit-content;">
                     <span style="font-size:12px;">OFF</span>
@@ -270,19 +303,19 @@
         <button class="btn-start" id="startBotBtn">🚀 START BOT</button>
     </div>
 
-    <!-- SECTION 2: MARKET ANALYSIS (Fetched from Backend) -->
+    <!-- SECTION 2: MARKET ANALYSIS (Backend-powered) -->
     <div class="card">
         <div class="card-header"><h3>📊 Market Analysis</h3><span id="analysisBadge" style="background:#0f172a; padding:4px 12px; border-radius:20px; font-size:11px;">Ready</span></div>
-        <div id="analysisContent" class="analysis-container"><div style="width:100%; text-align:center; padding:40px;">Select trade type to view analysis</div></div>
+        <div id="analysisContent" class="analysis-container"><div style="width:100%; text-align:center; padding:40px;">Select trade type and market to view analysis</div></div>
     </div>
 
-    <!-- SECTION 3: OPEN TRADES (Hidden by default) -->
+    <!-- SECTION 3: OPEN TRADES -->
     <div class="card" id="openTradesCard" style="display: none;">
         <div class="card-header"><h3>📊 Open Positions</h3><span id="openCount" class="account-badge">0</span></div>
         <div id="openTradesList"></div>
     </div>
 
-    <!-- SECTION 4: TRADE HISTORY (Session only) -->
+    <!-- SECTION 4: TRADE HISTORY -->
     <div class="card">
         <div class="card-header"><h3>📜 Trade History (This Session)</h3><button id="clearHistoryBtn" style="background:none; border:none; color:#ef4444; cursor:pointer;">Clear All</button></div>
         <div class="stats-row">
@@ -293,17 +326,32 @@
             <div class="stat-card"><div class="stat-title">Net Profit</div><div class="stat-number" id="netProfit">$0</div></div>
         </div>
         <div style="overflow-x:auto;">
-            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyBody"><tr><td colspan="6" style="text-align:center;">No trades this session</td></tr></tbody>
+            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyBody"><td><td colspan="6" style="text-align:center;">No trades this session</td></tr></tbody>
             </table>
         </div>
     </div>
 </div>
 
 <script>
-    const API_BASE = 'http://localhost:5000/api';
+    // ============================================================
+    // CONFIGURATION - CHANGE THIS TO YOUR BACKEND URL
+    // ============================================================
+    // For development on same computer:
+    const API_BASE = 'http://192.168.1.106:5000/api';
+    
+    // For testing on phone (same WiFi) - uncomment and use your PC's IP:
+    // const API_BASE = 'http://192.168.1.100:5000/api';
+    
+    // For production (deployed backend):
+    // const API_BASE = 'https://your-backend.onrender.com/api';
+    // ============================================================
+    
     let botActive = false;
-    let sessionTrades = [];
-    let marketAnalysisInterval = null;
+    let botLoopInterval = null;
+    let botLoopCount = 0;
+    let botTargetLoops = 999;
+    let botTakeProfit = null;
+    let botStopLoss = null;
     
     function getToken() { return localStorage.getItem('token'); }
     
@@ -316,142 +364,141 @@
         setTimeout(() => toast.remove(), 4000); 
     }
 
-    // Session trades management
-    function loadSessionTrades() {
-        const token = getToken();
-        if (!token) return;
-        const saved = localStorage.getItem(`voltix_trades_${token}`);
-        sessionTrades = saved ? JSON.parse(saved) : [];
-        updateHistoryDisplay();
-    }
-    
-    function saveSessionTrades() {
-        const token = getToken();
-        if (token) localStorage.setItem(`voltix_trades_${token}`, JSON.stringify(sessionTrades));
-    }
-    
-    function clearSessionTrades() {
-        sessionTrades = [];
-        saveSessionTrades();
-        updateHistoryDisplay();
-        showNotification('Trade history cleared', 'info');
-    }
-    
-    function addTradeToHistory(trade) {
-        sessionTrades.unshift(trade);
-        if (sessionTrades.length > 100) sessionTrades.pop();
-        saveSessionTrades();
-        updateHistoryDisplay();
-    }
-    
-    function updateHistoryDisplay() {
-        const tbody = document.getElementById('historyBody');
-        if (!sessionTrades.length) {
-            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades this session</td></tr>';
-            document.getElementById('totalTrades').innerText = '0';
-            document.getElementById('winsCount').innerText = '0';
-            document.getElementById('lossesCount').innerText = '0';
-            document.getElementById('winRate').innerText = '0%';
-            document.getElementById('netProfit').innerHTML = '$0';
-            return;
-        }
-        
-        tbody.innerHTML = sessionTrades.map(t => {
-            const isWin = t.result === 'WIN';
-            return `<tr>
-                <td>${t.time}</td>
-                <td>${t.market}</td>
-                <td class="${isWin ? 'win' : 'loss'}">${t.direction}</td>
-                <td>$${t.stake.toFixed(2)}</td>
-                <td class="${isWin ? 'win' : 'loss'}">${isWin ? 'Won' : 'Lost'}</td>
-                <td class="${isWin ? 'win' : 'loss'}">${t.profit > 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
-            </tr>`;
-        }).join('');
-        
-        const wins = sessionTrades.filter(t => t.result === 'WIN').length;
-        const losses = sessionTrades.filter(t => t.result === 'LOSS').length;
-        const totalProfit = sessionTrades.reduce((sum, t) => sum + t.profit, 0);
-        
-        document.getElementById('totalTrades').innerText = sessionTrades.length;
-        document.getElementById('winsCount').innerText = wins;
-        document.getElementById('lossesCount').innerText = losses;
-        document.getElementById('winRate').innerText = sessionTrades.length ? ((wins / sessionTrades.length) * 100).toFixed(1) + '%' : '0%';
-        document.getElementById('netProfit').innerHTML = totalProfit >= 0 ? `+$${totalProfit.toFixed(2)}` : `-$${Math.abs(totalProfit).toFixed(2)}`;
-    }
-    
-    // API Calls
-    async function fetchBalance() { 
-        try { 
-            const res = await fetch(`${API_BASE}/deriv/balance`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); 
-            if (res.ok) { 
-                const data = await res.json(); 
-                document.getElementById('balance').innerText = `$${data.balance.toFixed(2)}`; 
-                document.getElementById('accountId').innerText = data.account_id || 'VRTC'; 
-            } else {
-                console.warn('Balance fetch failed');
-            }
-        } catch(e) { console.warn(e); } 
-    }
-    
-    async function fetchDigitAnalysis() {
-        const symbol = document.getElementById('market').value || 'R_75';
+    // ============================================================
+    // ACCOUNT INFO - Fetches real balance from backend
+    // ============================================================
+    async function fetchAccountInfo() {
         try {
-            const res = await fetch(`${API_BASE}/bot/market-analysis/digits?symbol=${symbol}`, { 
+            const res = await fetch(`${API_BASE}/deriv/balance`, { 
                 headers: { 'Authorization': `Bearer ${getToken()}` } 
             });
             if (res.ok) {
                 const data = await res.json();
-                const digits = data.digits || [];
-                const container = document.getElementById('analysisContent');
-                if (digits.length) {
-                    const maxIdx = digits.reduce((iMax, x, i, arr) => x.percentage > arr[iMax].percentage ? i : iMax, 0);
-                    const minIdx = digits.reduce((iMin, x, i, arr) => x.percentage < arr[iMin].percentage ? i : iMin, 0);
-                    container.innerHTML = `<div class="digits-panel"><div class="digits-grid">${digits.map((d, i) => `<div class="digit-card ${i===maxIdx ? 'highlight' : i===minIdx ? 'lowlight' : ''}"><div class="digit-number">${d.digit}</div><div class="digit-percent">${d.percentage}%</div></div>`).join('')}</div><div class="analysis-text"><p>Digit ${digits[maxIdx].digit} shows highest frequency (${digits[maxIdx].percentage}%). Recommended trade direction based on this analysis.</p></div></div>`;
+                document.getElementById('balance').innerText = `$${data.balance.toFixed(2)}`;
+                document.getElementById('accountId').innerText = data.account_id || '---';
+                document.getElementById('accountTypeBadge').innerHTML = data.account_type === 'Real' ? '💰 REAL' : '🎮 DEMO';
+                document.getElementById('derivEmail').innerHTML = `📧 ${data.account_id ? `${data.account_id}@deriv.com` : 'Not connected'}`;
+                
+                const withdrawBtn = document.getElementById('withdrawBtn');
+                if (data.account_type === 'Real') {
+                    withdrawBtn.href = 'https://app.deriv.com/cashier/withdrawal';
+                    withdrawBtn.classList.remove('disabled');
+                    withdrawBtn.onclick = null;
                 } else {
-                    container.innerHTML = `<div class="price-panel"><div class="price-big">No Data</div><div class="price-change">N/A</div></div><div class="analysis-text"><p>Unable to fetch digit analysis. Please try again.</p></div>`;
+                    withdrawBtn.href = '#';
+                    withdrawBtn.classList.add('disabled');
+                    withdrawBtn.onclick = (e) => {
+                        e.preventDefault();
+                        showNotification('❌ Withdrawal only available for REAL accounts', 'error');
+                    };
                 }
+                return data;
             }
-        } catch(e) { console.warn(e); }
+            return null;
+        } catch(e) { 
+            console.warn(e); 
+            showNotification('Connection error fetching account info', 'error');
+            return null;
+        }
     }
-    
-    async function fetchPriceAnalysis() {
-        const symbol = document.getElementById('market').value || 'R_75';
-        try {
-            const res = await fetch(`${API_BASE}/bot/market-analysis/price?symbol=${symbol}`, { 
-                headers: { 'Authorization': `Bearer ${getToken()}` } 
-            });
-            if (res.ok) {
-                const data = await res.json();
-                const container = document.getElementById('analysisContent');
-                container.innerHTML = `<div class="price-panel"><div class="price-big">$${data.current_price || '---'}</div><div class="price-change">Live</div><div style="margin-top:16px; font-size:12px;">${data.symbol}</div></div><div class="analysis-text"><p>Real-time price feed from Deriv. Monitor movement for entry decisions.</p></div>`;
-            }
-        } catch(e) { console.warn(e); }
-    }
-    
-    // Update market analysis based on trade type (calls backend)
+
+    // ============================================================
+    // MARKET ANALYSIS - Fetches from backend based on trade type
+    // ============================================================
     async function updateMarketAnalysis() {
         const tradeType = document.getElementById('tradeType').value;
+        const market = document.getElementById('market').value;
         const container = document.getElementById('analysisContent');
-        if (!tradeType) {
-            container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Select trade type to view analysis</div>';
+        const badge = document.getElementById('analysisBadge');
+        
+        if (!tradeType || !market) {
+            container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Select trade type and market to view analysis</div>';
+            badge.innerText = 'Waiting';
             return;
         }
         
-        // Show loading state
-        container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Loading market analysis...</div>';
+        container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Loading analysis...</div>';
+        badge.innerText = 'Analyzing...';
         
-        const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType);
-        if (isDigitType) {
-            await fetchDigitAnalysis();
-        } else {
-            await fetchPriceAnalysis();
+        try {
+            // Call the appropriate backend endpoint based on trade type
+            const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType);
+            let endpoint = '';
+            let analysisData = null;
+            
+            if (isDigitType) {
+                // Fetch digit analysis for digit-based trades
+                endpoint = `${API_BASE}/bot/market-analysis/digits?symbol=${market}`;
+                const res = await fetch(endpoint, { 
+                    headers: { 'Authorization': `Bearer ${getToken()}` } 
+                });
+                if (res.ok) {
+                    analysisData = await res.json();
+                    const digits = analysisData.digits || [];
+                    if (digits.length) {
+                        const maxIdx = digits.reduce((iMax, x, i, arr) => x.percentage > arr[iMax].percentage ? i : iMax, 0);
+                        const minIdx = digits.reduce((iMin, x, i, arr) => x.percentage < arr[iMin].percentage ? i : iMin, 0);
+                        container.innerHTML = `
+                            <div class="digits-panel">
+                                <div class="digits-grid">
+                                    ${digits.map((d, i) => `<div class="digit-card ${i===maxIdx ? 'highlight' : i===minIdx ? 'lowlight' : ''}">
+                                        <div class="digit-number">${d.digit}</div>
+                                        <div class="digit-percent">${d.percentage}%</div>
+                                    </div>`).join('')}
+                                </div>
+                                <div class="analysis-text">
+                                    <p>Digit ${digits[maxIdx].digit} shows highest frequency (${digits[maxIdx].percentage}%). 
+                                    ${digits[maxIdx].digit % 2 === 0 ? 'Even' : 'Odd'} numbers currently dominate.
+                                    Recommended: ${digits[maxIdx].digit % 2 === 0 ? 'EVEN' : 'ODD'} for next tick.</p>
+                                </div>
+                            </div>
+                        `;
+                        badge.innerText = 'Digit Analysis';
+                    } else {
+                        container.innerHTML = '<div class="analysis-text"><p>No digit data available</p></div>';
+                    }
+                } else {
+                    throw new Error('Failed to fetch digit analysis');
+                }
+            } else {
+                // Fetch price analysis for Rise/Fall or Higher/Lower
+                endpoint = `${API_BASE}/bot/market-analysis/price?symbol=${market}`;
+                const res = await fetch(endpoint, { 
+                    headers: { 'Authorization': `Bearer ${getToken()}` } 
+                });
+                if (res.ok) {
+                    analysisData = await res.json();
+                    container.innerHTML = `
+                        <div class="price-panel">
+                            <div class="price-big">$${analysisData.current_price || '---'}</div>
+                            <div class="price-change">Live</div>
+                            <div style="margin-top:16px; font-size:12px;">${analysisData.symbol}</div>
+                        </div>
+                        <div class="analysis-text">
+                            <p>📊 Real-time price feed from Deriv.<br>
+                            ${tradeType === 'Rise/Fall' ? 'Monitor upward/downward momentum for entry.' : 'Compare current price against barrier for Higher/Lower decisions.'}</p>
+                        </div>
+                    `;
+                    badge.innerText = 'Price Analysis';
+                } else {
+                    throw new Error('Failed to fetch price analysis');
+                }
+            }
+        } catch (error) {
+            console.error('Analysis error:', error);
+            container.innerHTML = `<div class="analysis-text"><p>❌ Failed to fetch market analysis. Make sure backend is running.</p></div>`;
+            badge.innerText = 'Error';
         }
     }
-    
-    async function placeTrade(direction, stake, durationVal) {
+
+    // ============================================================
+    // TRADE EXECUTION
+    // ============================================================
+    async function executeTrade(direction, stake, durationVal) {
         const symbol = document.getElementById('market').value;
         const durationNum = parseInt(durationVal);
         const durationUnit = durationVal.includes('t') ? 't' : 'm';
+        
         try {
             const res = await fetch(`${API_BASE}/deriv/place-trade`, {
                 method: 'POST',
@@ -460,45 +507,58 @@
             });
             const data = await res.json();
             if (res.ok) {
-                // Simulate result - replace with real WebSocket result later
-                const isWin = Math.random() > 0.45;
-                const profit = isWin ? stake * 0.85 : -stake;
-                const trade = {
-                    time: new Date().toLocaleTimeString(),
-                    market: symbol,
-                    direction: direction,
-                    stake: stake,
-                    result: isWin ? 'WIN' : 'LOSS',
-                    profit: profit
-                };
-                addTradeToHistory(trade);
-                showNotification(`✅ Trade placed: ${direction}`, 'success');
-                setTimeout(() => fetchBalance(), 1500);
+                showNotification(`✅ Trade placed: ${direction} on ${symbol}`, 'success');
+                setTimeout(() => fetchAccountInfo(), 1500);
                 return true;
             } else {
                 showNotification(`❌ Trade failed: ${data.error}`, 'error');
                 return false;
             }
-        } catch(e) { showNotification('Connection error', 'error'); return false; }
+        } catch(e) { 
+            showNotification('❌ Connection error', 'error'); 
+            return false; 
+        }
     }
     
-    // Bot controls
-    let botLoopInterval = null;
-    let botLoopCount = 0;
-    let botTargetLoops = 999;
-    let botTakeProfit = null;
-    let botStopLoss = null;
+    // ============================================================
+    // BOT CONTROLS
+    // ============================================================
+    async function runBotLoop() {
+        if (!botActive) return;
+        if (botTargetLoops > 0 && botLoopCount >= botTargetLoops) {
+            stopBot();
+            showNotification('Bot completed all trades', 'success');
+            return;
+        }
+        const stake = parseFloat(document.getElementById('stake').value);
+        const durationVal = document.getElementById('duration').value;
+        const currentDirection = Math.random() > 0.5 ? 'Rise' : 'Fall';
+        const success = await executeTrade(currentDirection, stake, durationVal);
+        if (success) {
+            botLoopCount++;
+            await fetchAccountInfo();
+        }
+        if (botActive) setTimeout(runBotLoop, 7000);
+    }
     
     async function startBot() {
         const stake = parseFloat(document.getElementById('stake').value);
         const durationVal = document.getElementById('duration').value;
-        const loops = parseInt(document.getElementById('loops').value);
+        const loopsInput = document.getElementById('loops').value;
+        const loops = loopsInput === '' || parseInt(loopsInput) === 0 ? 0 : parseInt(loopsInput);
         const tp = parseFloat(document.getElementById('tp').value);
         const sl = parseFloat(document.getElementById('sl').value);
         
         if (!validateInputs()) return;
+        if (sl && sl < 1.5) { showNotification('Stop Loss minimum is $1.50', 'error'); return; }
         
-        botTargetLoops = loops > 0 ? loops : 999;
+        const accountInfo = await fetchAccountInfo();
+        if (!accountInfo || !accountInfo.account_id) {
+            showNotification('Please connect your Deriv account first', 'error');
+            return;
+        }
+        
+        botTargetLoops = loops === 0 ? 999999 : loops;
         botTakeProfit = tp || null;
         botStopLoss = sl || null;
         botLoopCount = 0;
@@ -507,43 +567,19 @@
         document.getElementById('startBotBtn').innerText = '🛑 STOP BOT';
         document.getElementById('startBotBtn').style.background = '#ef4444';
         showNotification('Bot started', 'success');
-        
-        botLoopInterval = setInterval(async () => {
-            if (!botActive) return;
-            if (botLoopCount >= botTargetLoops) {
-                stopBot();
-                showNotification('Bot completed all trades', 'success');
-                return;
-            }
-            
-            const currentDirection = Math.random() > 0.5 ? 'Rise' : 'Fall';
-            const success = await placeTrade(currentDirection, stake, durationVal);
-            
-            if (success) {
-                botLoopCount++;
-                const currentProfit = sessionTrades.reduce((sum, t) => sum + t.profit, 0);
-                
-                if (botTakeProfit && currentProfit >= botTakeProfit) {
-                    stopBot();
-                    showNotification(`🎯 Take Profit reached: +$${botTakeProfit}`, 'success');
-                }
-                if (botStopLoss && currentProfit <= -botStopLoss) {
-                    stopBot();
-                    showNotification(`🛑 Stop Loss hit: -$${botStopLoss}`, 'error');
-                }
-            }
-        }, 7000);
+        runBotLoop();
     }
     
     function stopBot() {
         botActive = false;
-        if (botLoopInterval) clearInterval(botLoopInterval);
         document.getElementById('startBotBtn').innerText = '🚀 START BOT';
         document.getElementById('startBotBtn').style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
         showNotification('Bot stopped', 'info');
     }
     
-    // UI Helpers
+    // ============================================================
+    // UI HELPERS
+    // ============================================================
     function updateDurationOptions() { 
         const tradeType = document.getElementById('tradeType').value; 
         const durationSelect = document.getElementById('duration'); 
@@ -572,7 +608,20 @@
         return valid; 
     }
     
-    // Event Listeners
+    // Session trades display
+    function updateHistoryDisplay() {
+        const tbody = document.getElementById('historyBody');
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades this session</td></tr>';
+        document.getElementById('totalTrades').innerText = '0';
+        document.getElementById('winsCount').innerText = '0';
+        document.getElementById('lossesCount').innerText = '0';
+        document.getElementById('winRate').innerText = '0%';
+        document.getElementById('netProfit').innerHTML = '$0';
+    }
+    
+    // ============================================================
+    // EVENT LISTENERS & INITIALIZATION
+    // ============================================================
     document.getElementById('tradeType').addEventListener('change', () => { 
         updateDurationOptions(); 
         updateAdditionalField(); 
@@ -582,23 +631,21 @@
         if (document.getElementById('tradeType').value) updateMarketAnalysis(); 
     });
     document.getElementById('startBotBtn').addEventListener('click', () => { if (botActive) stopBot(); else startBot(); });
-    document.getElementById('clearHistoryBtn').addEventListener('click', clearSessionTrades);
+    document.getElementById('clearHistoryBtn').addEventListener('click', () => { updateHistoryDisplay(); showNotification('Trade history cleared', 'info'); });
     document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'login.html'; });
     document.getElementById('martingale').addEventListener('change', (e) => showNotification(`Martingale ${e.target.checked ? 'ON' : 'OFF'}`, 'info'));
     
-    // Initialize
     async function init() {
         const token = localStorage.getItem('token');
         if (!token) { 
             window.location.href = 'login.html'; 
             return; 
         }
-        loadSessionTrades();
-        await fetchBalance();
+        await fetchAccountInfo();
         updateDurationOptions();
         updateAdditionalField();
         updateMarketAnalysis();
-        setInterval(fetchBalance, 10000);
+        setInterval(fetchAccountInfo, 10000);
     }
     init();
 </script>

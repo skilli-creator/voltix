@@ -16,6 +16,16 @@ class DerivService:
         return f"{DerivService.DERIV_WS_URL}?app_id={DerivService.DERIV_APP_ID}"
     
     @staticmethod
+    def _close_ws_safely(ws):
+        """Safely close WebSocket"""
+        try:
+            ws.close()
+        except:
+            pass
+    
+    # ==================== CONNECTION TEST ====================
+    
+    @staticmethod
     def test_connection(api_token):
         """Test if the API token is valid using WebSocket"""
         result = {"success": False, "data": None, "error": None}
@@ -29,11 +39,11 @@ class DerivService:
                 result["success"] = True
                 result["data"] = data['authorize']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             print(f"❌ WebSocket error: {error}")
@@ -71,9 +81,11 @@ class DerivService:
             print(f"❌ Authorization failed: {result['error']}")
             return False, result["error"] or "Connection failed"
     
+    # ==================== ACCOUNT INFO ====================
+    
     @staticmethod
     def get_account_info(api_token):
-        """Get account information using WebSocket"""
+        """Get account information using WebSocket - returns authorized account info directly"""
         result = {"success": False, "info": None, "error": None}
         response_received = threading.Event()
         
@@ -82,21 +94,23 @@ class DerivService:
             print(f"📨 Account Info Response: {data}")
             
             if data.get('authorize'):
+                authorize_data = data['authorize']
+                # Use the authorized account directly (NO switching)
                 result["success"] = True
                 result["info"] = {
-                    'account_id': data['authorize'].get('loginid', ''),
-                    'currency': data['authorize'].get('currency', 'USD'),
-                    'account_type': 'Demo' if data['authorize'].get('is_virtual') else 'Real',
-                    'email': data['authorize'].get('email', ''),
-                    'balance': data['authorize'].get('balance', 0),
-                    'fullname': data['authorize'].get('fullname', '')
+                    'account_id': authorize_data.get('loginid', ''),
+                    'currency': authorize_data.get('currency', 'USD'),
+                    'account_type': 'Demo' if authorize_data.get('is_virtual') else 'Real',
+                    'email': authorize_data.get('email', ''),
+                    'balance': authorize_data.get('balance', 0),
+                    'fullname': authorize_data.get('fullname', '')
                 }
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -106,12 +120,7 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True
@@ -124,33 +133,34 @@ class DerivService:
         else:
             return False, result["error"] or "Failed to get account info"
     
+    # ==================== BALANCE ====================
+    
     @staticmethod
     def get_balance(api_token):
-        """Get account balance using WebSocket"""
-        result = {"success": False, "balance": None, "currency": None, "error": None}
+        """Get account balance using WebSocket - uses authorized account directly (NO switching)"""
+        result = {"success": False, "balance": None, "currency": None, "error": None, "loginid": None}
         response_received = threading.Event()
-        authorized = False
         
         def on_message(ws, message):
-            nonlocal authorized
             data = json.loads(message)
             print(f"📨 Balance Response: {data}")
             
-            if data.get('authorize') and not authorized:
-                authorized = True
+            if data.get('authorize'):
+                # After authorization, directly get balance (NO switch_account)
                 ws.send(json.dumps({"balance": 1}))
             
             elif data.get('balance'):
                 result["success"] = True
                 result["balance"] = data['balance']['balance']
                 result["currency"] = data['balance']['currency']
+                result["loginid"] = data['balance']['loginid']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -160,43 +170,33 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True
         wst.start()
         
-        response_received.wait(timeout=10)
+        response_received.wait(timeout=15)
         
         if result["success"]:
-            return True, result["balance"], result["currency"]
+            return True, result["balance"], result["currency"], result["loginid"]
         else:
-            return False, result["error"] or "Failed to get balance", None
+            return False, result["error"] or "Failed to get balance", None, None
+    
+    # ==================== PLACE TRADE ====================
     
     @staticmethod
     def place_trade(api_token, symbol, trade_type, amount, duration, duration_unit='t'):
-        """
-        Place a binary option trade on Deriv using WebSocket
-        trade_type: 'CALL' for Rise, 'PUT' for Fall
-        """
+        """Place a binary option trade on Deriv using WebSocket - uses authorized account directly"""
         result = {"success": False, "trade": None, "error": None}
         response_received = threading.Event()
-        authorized = False
-        proposal_id = None
         
         def on_message(ws, message):
-            nonlocal authorized, proposal_id
             data = json.loads(message)
             print(f"📨 Trade Response: {data}")
             
-            if data.get('authorize') and not authorized:
-                authorized = True
-                print(f"✅ Authorized! Sending proposal...")
+            if data.get('authorize'):
+                # After authorization, directly send proposal (NO switch_account)
                 ws.send(json.dumps({
                     "proposal": 1,
                     "amount": amount,
@@ -208,7 +208,7 @@ class DerivService:
                     "symbol": symbol
                 }))
             
-            elif data.get('proposal') and authorized:
+            elif data.get('proposal'):
                 proposal_id = data['proposal']['id']
                 print(f"📊 Proposal received! ID: {proposal_id}")
                 ws.send(json.dumps({
@@ -225,13 +225,13 @@ class DerivService:
                 }
                 print(f"✅ Trade placed! Contract ID: {result['trade']['contract_id']}")
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 print(f"❌ Error: {result['error']}")
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -241,12 +241,7 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True
@@ -259,20 +254,20 @@ class DerivService:
         else:
             return False, result["error"] or "Failed to place trade"
     
+    # ==================== ACTIVE CONTRACTS ====================
+    
     @staticmethod
     def get_active_contracts(api_token):
-        """Get all active contracts for the account"""
+        """Get all active contracts for the account - uses authorized account directly"""
         result = {"success": False, "contracts": [], "error": None}
         response_received = threading.Event()
-        authorized = False
         
         def on_message(ws, message):
-            nonlocal authorized
             data = json.loads(message)
             print(f"📨 Active Contracts Response: {data}")
             
-            if data.get('authorize') and not authorized:
-                authorized = True
+            if data.get('authorize'):
+                # After authorization, directly get portfolio (NO switch_account)
                 ws.send(json.dumps({"portfolio": 1}))
             
             elif data.get('portfolio'):
@@ -289,12 +284,12 @@ class DerivService:
                 result["success"] = True
                 result["contracts"] = contracts
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -304,12 +299,7 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True
@@ -321,36 +311,39 @@ class DerivService:
             return True, result["contracts"]
         else:
             return False, result["error"] or "Failed to get active contracts"
-
+    
+    # ==================== TRADE HISTORY ====================
+    
     @staticmethod
     def get_trade_history(api_token, limit=50):
-        """Get trade history from Deriv API (real-time, no storage)"""
+        """Get trade history from Deriv API - uses authorized account directly"""
         result = {"success": False, "history": [], "error": None}
         response_received = threading.Event()
-        authorized = False
         
         def on_message(ws, message):
-            nonlocal authorized
             data = json.loads(message)
             print(f"📨 Trade History Response: {data}")
             
-            if data.get('authorize') and not authorized:
-                authorized = True
-                # Request profit table (trade history)
+            if data.get('authorize'):
+                # After authorization, directly get profit_table (NO switch_account)
                 ws.send(json.dumps({"profit_table": 1, "limit": limit}))
             
             elif data.get('profit_table'):
                 transactions = []
                 for transaction in data['profit_table'].get('transactions', []):
+                    buy_price = transaction.get('buy_price', 0)
+                    sell_price = transaction.get('sell_price', 0)
+                    profit = sell_price - buy_price if sell_price and buy_price else transaction.get('profit_loss', 0)
+                    
                     transactions.append({
                         'contract_id': transaction.get('contract_id'),
                         'transaction_id': transaction.get('transaction_id'),
                         'action': transaction.get('action'),
                         'amount': transaction.get('amount'),
                         'balance_after': transaction.get('balance_after'),
-                        'buy_price': transaction.get('buy_price'),
-                        'sell_price': transaction.get('sell_price'),
-                        'profit': transaction.get('profit_loss', 0),
+                        'buy_price': buy_price,
+                        'sell_price': sell_price,
+                        'profit': profit,
                         'payout': transaction.get('payout'),
                         'transaction_time': transaction.get('transaction_time'),
                         'status': transaction.get('status'),
@@ -362,12 +355,12 @@ class DerivService:
                 result["success"] = True
                 result["history"] = transactions
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -377,12 +370,7 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True
@@ -394,24 +382,21 @@ class DerivService:
             return True, result["history"]
         else:
             return False, result["error"] or "Failed to get trade history"
-
-    # ==================== NEW METHOD FOR CONTRACT RESULTS ====================
+    
+    # ==================== CONTRACT INFO ====================
     
     @staticmethod
     def get_contract_info(api_token, contract_id):
-        """Get information about a specific contract (real-time result)"""
+        """Get information about a specific contract - uses authorized account directly"""
         result = {"success": False, "info": None, "error": None}
         response_received = threading.Event()
-        authorized = False
         
         def on_message(ws, message):
-            nonlocal authorized
             data = json.loads(message)
             print(f"📨 Contract Info Response: {data}")
             
-            if data.get('authorize') and not authorized:
-                authorized = True
-                # Request contract info
+            if data.get('authorize'):
+                # After authorization, directly get contract info (NO switch_account)
                 ws.send(json.dumps({"proposal_open_contract": contract_id}))
             
             elif data.get('proposal_open_contract'):
@@ -429,12 +414,12 @@ class DerivService:
                     'transaction_ids': contract.get('transaction_ids', [])
                 }
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
             
             elif data.get('error'):
                 result["error"] = data['error']['message']
                 response_received.set()
-                ws.close()
+                DerivService._close_ws_safely(ws)
         
         def on_error(ws, error):
             result["error"] = str(error)
@@ -444,12 +429,7 @@ class DerivService:
             ws.send(json.dumps({"authorize": api_token}))
         
         ws_url = DerivService._get_ws_url()
-        ws = websocket.WebSocketApp(
-            ws_url,
-            on_open=on_open,
-            on_message=on_message,
-            on_error=on_error
-        )
+        ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
         
         wst = threading.Thread(target=ws.run_forever)
         wst.daemon = True

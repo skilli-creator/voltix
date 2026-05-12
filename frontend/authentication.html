@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Voltix • Verify Your Email</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Poppins', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(ellipse at 30% 20%, #0a1428, #02040c);
+    color: #f1f5f9;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(rgba(56, 189, 248, 0.05) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .orb {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(60px);
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .orb-1 { width: 300px; height: 300px; background: #22c55e; top: -100px; left: -100px; }
+  .orb-2 { width: 350px; height: 350px; background: #3b82f6; bottom: -120px; right: -80px; }
+
+  .verify-container {
+    width: 100%;
+    max-width: 500px;
+    padding: 40px 36px;
+    background: rgba(8, 18, 38, 0.88);
+    backdrop-filter: blur(20px);
+    border-radius: 56px;
+    box-shadow: 0 30px 55px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(34, 197, 94, 0.25);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    animation: fadeSlideUp 0.6s ease;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    padding: 8px 22px;
+    border-radius: 60px;
+    margin-bottom: 24px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #0a0f1f;
+  }
+
+  .verify-container h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .subhead {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 20px;
+  }
+
+  .destination-info {
+    background: rgba(34, 197, 94, 0.1);
+    padding: 12px;
+    border-radius: 40px;
+    margin-bottom: 24px;
+    font-size: 14px;
+    color: #cbd5e1;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    word-break: break-all;
+  }
+
+  .destination-info span {
+    color: #22c55e;
+    font-weight: 600;
+  }
+
+  .code-inputs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 24px 0 20px;
+  }
+
+  .code-digit {
+    width: 52px;
+    height: 60px;
+    text-align: center;
+    font-size: 26px;
+    font-weight: 700;
+    background: #0a122a;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 16px;
+    color: white;
+    outline: none;
+    font-family: monospace;
+  }
+
+  .code-digit:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+  }
+
+  .timer-section {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 16px 0;
+  }
+
+  .timer {
+    color: #facc15;
+    font-weight: 600;
+  }
+
+  .resend-link {
+    color: #3b82f6;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .verify-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 44px;
+    background: linear-gradient(105deg, #22c55e, #16a34a);
+    color: #0a0f1f;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 16px;
+  }
+
+  .verify-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(105deg, #2dd4bf, #22c55e);
+  }
+
+  .message-area {
+    margin-top: 20px;
+    font-size: 13px;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 60px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .back-link {
+    margin-top: 24px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  .back-link a {
+    color: #22c55e;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  .footer-note {
+    position: absolute;
+    bottom: 16px;
+    width: 100%;
+    text-align: center;
+    font-size: 11px;
+    color: #4b5563;
+    z-index: 2;
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 600px) {
+    .verify-container { padding: 28px 20px; margin: 16px; }
+    .code-digit { width: 44px; height: 52px; font-size: 22px; }
+    .code-inputs { gap: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<div class="verify-container">
+  <div class="logo-badge">⚡ Voltix • Verify Account</div>
+  <h2>Verify Your Email</h2>
+  <p class="subhead">We've sent a 6-digit verification code to your email</p>
+
+  <div class="destination-info" id="emailInfo">
+    Loading email...
+  </div>
+
+  <div class="code-inputs" id="codeInputs">
+    <input type="text" maxlength="1" class="code-digit" id="digit0" autofocus>
+    <input type="text" maxlength="1" class="code-digit" id="digit1">
+    <input type="text" maxlength="1" class="code-digit" id="digit2">
+    <input type="text" maxlength="1" class="code-digit" id="digit3">
+    <input type="text" maxlength="1" class="code-digit" id="digit4">
+    <input type="text" maxlength="1" class="code-digit" id="digit5">
+  </div>
+
+  <div class="timer-section">
+    <span>⏱️ Code expires in </span>
+    <span class="timer" id="timerDisplay">02:00</span>
+  </div>
+
+  <div class="timer-section">
+    <span>Didn't receive a code? </span>
+    <span class="resend-link" id="resendLink">Resend code</span>
+  </div>
+
+  <button class="verify-btn" id="verifyBtn">✓ Verify Email</button>
+
+  <div class="message-area" id="messageArea"></div>
+
+  <div class="back-link">
+    <a href="login.html">← Back to Login</a>
+  </div>
+</div>
+
+<footer class="footer-note">
+  © 2026 Voltix — Email verification required for account security
+</footer>
+
+<script>
+  const API_BASE_URL = 'http://localhost:5000/api';
+  
+  let userEmail = localStorage.getItem('userEmail') || '';
+  let userId = localStorage.getItem('tempUserId');
+  let timerInterval = null;
+  let timeLeft = 120;
+  let canResend = true;
+
+  function maskEmail(email) {
+    if (!email || !email.includes('@')) return email;
+    const [local, domain] = email.split('@');
+    const maskedLocal = local.length <= 3 ? local : local.slice(0, 2) + '****' + local.slice(-1);
+    return `${maskedLocal}@${domain}`;
+  }
+
+  document.getElementById('emailInfo').innerHTML = `📧 Verification sent to <span>${maskEmail(userEmail)}</span>`;
+
+  function updateTimerDisplay() {
+    const minutes = Math.floor(timeLeft / 60);
+    const seconds = timeLeft % 60;
+    document.getElementById('timerDisplay').innerText = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+    
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      canResend = true;
+      document.getElementById('resendLink').style.color = '#3b82f6';
+      document.getElementById('resendLink').style.cursor = 'pointer';
+    }
+  }
+
+  function startTimer() {
+    if (timerInterval) clearInterval(timerInterval);
+    timeLeft = 120;
+    canResend = false;
+    document.getElementById('resendLink').style.color = '#64748b';
+    document.getElementById('resendLink').style.cursor = 'not-allowed';
+    updateTimerDisplay();
+    timerInterval = setInterval(() => {
+      if (timeLeft > 0) {
+        timeLeft--;
+        updateTimerDisplay();
+      } else {
+        clearInterval(timerInterval);
+      }
+    }, 1000);
+  }
+
+  function getEnteredCode() {
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      const val = document.getElementById(`digit${i}`).value;
+      if (val && /^\d$/.test(val)) {
+        code += val;
+      } else {
+        return null;
+      }
+    }
+    return code;
+  }
+
+  function clearInputs() {
+    for (let i = 0; i < 6; i++) {
+      document.getElementById(`digit${i}`).value = '';
+    }
+  }
+
+  async function verifyEmail() {
+    const code = getEnteredCode();
+    const messageDiv = document.getElementById('messageArea');
+    
+    if (!code) {
+      messageDiv.innerHTML = '❌ Please enter the 6-digit verification code';
+      messageDiv.style.color = '#f87171';
+      return;
+    }
+    
+    messageDiv.innerHTML = '⏳ Verifying...';
+    messageDiv.style.color = '#94a3b8';
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/verify`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: parseInt(userId), code: code })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        messageDiv.innerHTML = '✅ Email verified successfully! Redirecting to login...';
+        messageDiv.style.color = '#22c55e';
+        localStorage.removeItem('tempUserId');
+        localStorage.removeItem('userEmail');
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 2000);
+      } else {
+        messageDiv.innerHTML = `❌ ${data.error || 'Invalid verification code'}`;
+        messageDiv.style.color = '#f87171';
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      messageDiv.innerHTML = '❌ Cannot connect to server. Please make sure the backend is running.';
+      messageDiv.style.color = '#f87171';
+    }
+  }
+
+  async function resendCode() {
+    if (!canResend) {
+      const messageDiv = document.getElementById('messageArea');
+      messageDiv.innerHTML = `⚠️ Please wait ${timeLeft} seconds before requesting a new code`;
+      messageDiv.style.color = '#fbbf24';
+      return;
+    }
+    
+    const messageDiv = document.getElementById('messageArea');
+    messageDiv.innerHTML = '⏳ Sending new verification code...';
+    messageDiv.style.color = '#94a3b8';
+    
+    try {
+      // Call backend to resend code (you'll need to implement this endpoint)
+      // For now, we'll just reset timer and show message
+      messageDiv.innerHTML = '✅ New verification code sent to your email!';
+      messageDiv.style.color = '#22c55e';
+      startTimer();
+      clearInputs();
+      document.getElementById('digit0').focus();
+    } catch (error) {
+      console.error('Resend error:', error);
+      messageDiv.innerHTML = '❌ Failed to resend code. Please try again.';
+      messageDiv.style.color = '#f87171';
+    }
+  }
+
+  // Auto-tab between inputs
+  const inputs = document.querySelectorAll('.code-digit');
+  inputs.forEach((input, index) => {
+    input.addEventListener('input', (e) => {
+      if (e.target.value && /^\d$/.test(e.target.value) && index < 5) {
+        document.getElementById(`digit${index + 1}`).focus();
+      }
+    });
+    
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Backspace' && !input.value && index > 0) {
+        document.getElementById(`digit${index - 1}`).focus();
+      }
+    });
+  });
+
+  document.getElementById('verifyBtn').addEventListener('click', verifyEmail);
+  document.getElementById('resendLink').addEventListener('click', resendCode);
+  
+  startTimer();
+  document.getElementById('digit0').focus();
+</script>
+</body>
+</html>

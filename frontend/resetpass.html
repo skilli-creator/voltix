@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltix • Reset Password</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(ellipse at 30% 20%, #0a1428, #02040c);
+    color: white;
+    padding: 20px;
+  }
+  .container {
+    max-width: 450px;
+    width: 100%;
+    padding: 44px 40px;
+    background: rgba(8, 18, 38, 0.85);
+    backdrop-filter: blur(18px);
+    border-radius: 52px;
+    text-align: center;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+  .logo {
+    font-size: 1.8rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #22c55e, #38bdf8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+  }
+  h2 { margin-bottom: 10px; font-size: 1.8rem; }
+  .subhead { color: #9ca3af; font-size: 0.85rem; margin-bottom: 30px; }
+  .input-group { text-align: left; margin-bottom: 24px; }
+  label { font-size: 13px; color: #cbd5e1; display: block; margin-bottom: 8px; }
+  
+  /* Fixed input wrapper - no interference */
+  .input-wrapper {
+    position: relative;
+    width: 100%;
+  }
+  
+  input {
+    width: 100%;
+    padding: 14px 45px 14px 16px;
+    border-radius: 32px;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    background: #0a122a;
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  
+  input:focus { 
+    border-color: #22c55e; 
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
+  }
+  
+  /* Fixed toggle button - positioned absolutely, not interfering */
+  .toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    font-size: 18px;
+    transition: color 0.2s;
+    z-index: 2;
+    padding: 5px;
+    margin: 0;
+    line-height: 1;
+  }
+  
+  .toggle-password:hover { color: #22c55e; }
+  .toggle-password:focus { outline: none; }
+  
+  button[type="submit"] {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 40px;
+    background: linear-gradient(105deg, #22c55e, #16a34a);
+    color: #0a0f1f;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 10px;
+  }
+  
+  button[type="submit"]:hover { 
+    transform: translateY(-2px); 
+    background: linear-gradient(105deg, #2dd4bf, #22c55e); 
+  }
+  
+  .message {
+    margin-top: 20px;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 60px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+  
+  .strength-meter {
+    margin-top: 8px;
+    height: 4px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+  
+  .strength-fill { width: 0%; height: 100%; transition: width 0.3s; }
+  .strength-text { font-size: 10px; margin-top: 5px; color: #64748b; }
+  
+  .back-link { margin-top: 20px; font-size: 13px; }
+  .back-link a { color: #3b82f6; text-decoration: none; }
+  .back-link a:hover { text-decoration: underline; }
+  
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+  .error-shake { animation: shake 0.3s ease-in-out; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">⚡ Voltix</div>
+  <h2>Create New Password</h2>
+  <p class="subhead">Enter your new password below</p>
+  
+  <form id="resetForm">
+    <!-- New Password Field -->
+    <div class="input-group">
+      <label>🔒 New Password</label>
+      <div class="input-wrapper">
+        <input type="password" id="newPassword" placeholder="Enter new password" required autofocus>
+        <button type="button" class="toggle-password" data-target="newPassword">👁️</button>
+      </div>
+      <div class="strength-meter"><div class="strength-fill" id="strengthFill"></div></div>
+      <div class="strength-text" id="strengthText">Enter a strong password</div>
+    </div>
+    
+    <!-- Confirm Password Field -->
+    <div class="input-group">
+      <label>✓ Confirm Password</label>
+      <div class="input-wrapper">
+        <input type="password" id="confirmPassword" placeholder="Confirm your new password" required>
+        <button type="button" class="toggle-password" data-target="confirmPassword">👁️</button>
+      </div>
+    </div>
+    
+    <button type="submit">Reset Password →</button>
+  </form>
+  
+  <div class="message" id="message"></div>
+  <div class="back-link"><a href="login.html">← Back to Login</a></div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:5000/api';
+
+// Check if reset token exists
+const resetToken = sessionStorage.getItem('resetToken');
+if (!resetToken) {
+  window.location.href = 'forgot-password.html';
+}
+
+// Password strength checker
+const newPassword = document.getElementById('newPassword');
+const strengthFill = document.getElementById('strengthFill');
+const strengthText = document.getElementById('strengthText');
+
+function checkStrength(pw) {
+  let score = 0;
+  if (pw.length >= 6) score++;
+  if (pw.length >= 10) score++;
+  if (/[A-Z]/.test(pw)) score++;
+  if (/[0-9]/.test(pw)) score++;
+  if (/[^A-Za-z0-9]/.test(pw)) score++;
+  
+  const widthMap = ['0%', '20%', '40%', '60%', '80%', '100%'];
+  const colorMap = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#22c55e', '#2dd4bf'];
+  const textMap = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+  
+  strengthFill.style.width = widthMap[score];
+  strengthFill.style.backgroundColor = colorMap[score];
+  strengthText.innerText = textMap[score];
+  strengthText.style.color = colorMap[score];
+  return score;
+}
+
+newPassword.addEventListener('input', (e) => checkStrength(e.target.value));
+
+// Toggle password visibility - Fixed version
+document.querySelectorAll('.toggle-password').forEach(btn => {
+  btn.addEventListener('click', function(e) {
+    e.preventDefault();
+    e.stopPropagation();
+    const targetId = this.getAttribute('data-target');
+    const input = document.getElementById(targetId);
+    if (input) {
+      if (input.type === 'password') {
+        input.type = 'text';
+        this.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        this.textContent = '👁️';
+      }
+    }
+  });
+});
+
+// Shake animation
+function shakeElement(element) {
+  element.classList.add('error-shake');
+  setTimeout(() => {
+    element.classList.remove('error-shake');
+  }, 300);
+}
+
+// Form submission
+document.getElementById('resetForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const newPasswordValue = document.getElementById('newPassword').value;
+  const confirmPasswordValue = document.getElementById('confirmPassword').value;
+  const messageDiv = document.getElementById('message');
+  const container = document.querySelector('.container');
+  
+  // Clear previous message
+  messageDiv.innerHTML = '';
+  
+  // Validation
+  if (!newPasswordValue || !confirmPasswordValue) {
+    messageDiv.innerHTML = '❌ Please fill in all fields';
+    messageDiv.style.color = '#f87171';
+    shakeElement(container);
+    return;
+  }
+  
+  if (newPasswordValue !== confirmPasswordValue) {
+    messageDiv.innerHTML = '❌ Passwords do not match';
+    messageDiv.style.color = '#f87171';
+    shakeElement(container);
+    return;
+  }
+  
+  if (newPasswordValue.length < 6) {
+    messageDiv.innerHTML = '❌ Password must be at least 6 characters';
+    messageDiv.style.color = '#f87171';
+    shakeElement(container);
+    return;
+  }
+  
+  const strength = checkStrength(newPasswordValue);
+  if (strength < 2) {
+    messageDiv.innerHTML = '❌ Please choose a stronger password';
+    messageDiv.style.color = '#f87171';
+    shakeElement(container);
+    return;
+  }
+  
+  messageDiv.innerHTML = '⏳ Resetting password...';
+  messageDiv.style.color = '#94a3b8';
+  
+  try {
+    const response = await fetch(`${API_BASE}/auth/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reset_token: resetToken,
+        new_password: newPasswordValue,
+        confirm_password: confirmPasswordValue
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      sessionStorage.clear();
+      localStorage.removeItem('resetToken');
+      messageDiv.innerHTML = '✅ Password reset successful! Redirecting to login...';
+      messageDiv.style.color = '#22c55e';
+      messageDiv.style.background = 'rgba(34, 197, 94, 0.1)';
+      
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+    } else {
+      messageDiv.innerHTML = `❌ ${data.error || 'Reset failed'}`;
+      messageDiv.style.color = '#f87171';
+      messageDiv.style.background = 'rgba(239, 68, 68, 0.1)';
+      shakeElement(container);
+    }
+  } catch (error) {
+    console.error('Reset error:', error);
+    messageDiv.innerHTML = '❌ Cannot connect to server. Please make sure the backend is running.';
+    messageDiv.style.color = '#f87171';
+    shakeElement(container);
+  }
+});
+</script>
+</body>
+</html>

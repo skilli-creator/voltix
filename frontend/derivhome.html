@@ -1,0 +1,556 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>⚡ Voltix AI | Deriv Trading Intelligence</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, sans-serif;
+    background: radial-gradient(ellipse at 30% 10%, #0b1a2e, #03050b);
+    color: #f1f5f9;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #0f172a;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2d3a5e;
+    border-radius: 8px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 18px 40px;
+    background: rgba(3, 7, 18, 0.75);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(56, 189, 248, 0.2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 0 6px #38bdf8);
+  }
+
+  .logo h2 {
+    font-weight: 700;
+    background: linear-gradient(135deg, #e0f2fe, #38bdf8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    letter-spacing: -0.3px;
+  }
+
+  .back-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 40px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .back-btn:hover {
+    background: #2d3a5e;
+    border-color: #38bdf8;
+    color: white;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 28px;
+    text-align: center;
+  }
+
+  .badge-glow {
+    display: inline-flex;
+    background: rgba(15, 42, 68, 0.7);
+    backdrop-filter: blur(4px);
+    padding: 8px 20px;
+    border-radius: 60px;
+    border: 1px solid rgba(56, 189, 248, 0.4);
+    font-size: 13px;
+    font-weight: 500;
+    color: #7dd3fc;
+    letter-spacing: 0.3px;
+    margin-bottom: 24px;
+  }
+
+  h1 {
+    font-size: 64px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin: 16px 0 20px;
+    letter-spacing: -1px;
+  }
+
+  .highlight {
+    background: linear-gradient(135deg, #38bdf8, #818cf8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #9ca3af;
+    max-width: 700px;
+    margin: 0 auto 36px;
+    line-height: 1.5;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 28px;
+    background: linear-gradient(105deg, #0ea5e9, #3b82f6);
+    color: white;
+    border-radius: 40px;
+    text-decoration: none;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    border: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 6px 14px rgba(14, 165, 233, 0.2);
+  }
+
+  .button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 12px 20px rgba(14, 165, 233, 0.3);
+    background: linear-gradient(105deg, #0284c7, #2563eb);
+  }
+
+  .secondary-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    box-shadow: none;
+  }
+
+  .secondary-btn:hover {
+    background: #2d3a5e;
+    border-color: #38bdf8;
+    transform: translateY(-2px);
+  }
+
+  .connect-panel {
+    background: rgba(15, 23, 42, 0.65);
+    backdrop-filter: blur(12px);
+    border-radius: 36px;
+    padding: 32px 28px;
+    margin: 40px 0 20px;
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    transition: all 0.2s;
+  }
+
+  .section-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    color: #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+  }
+
+  .or-divider {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 20px 0;
+    color: #4b5563;
+    font-size: 14px;
+  }
+
+  .or-divider hr {
+    width: 80px;
+    background: #2d3a5e;
+    height: 1px;
+    border: none;
+  }
+
+  .token-box {
+    max-width: 440px;
+    margin: 0 auto;
+  }
+
+  .password-wrapper {
+    position: relative;
+    width: 100%;
+    margin-bottom: 18px;
+  }
+
+  .password-wrapper input {
+    width: 100%;
+    padding: 14px 44px 14px 20px;
+    background: #0f172a;
+    border: 1.5px solid #1e293b;
+    border-radius: 60px;
+    color: #f1f5f9;
+    font-size: 14px;
+    transition: all 0.2s;
+    outline: none;
+  }
+
+  .password-wrapper input:focus {
+    border-color: #38bdf8;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+  }
+
+  .toggle-eye {
+    position: absolute;
+    right: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 18px;
+    transition: 0.2s;
+    background: none;
+    border: none;
+  }
+
+  .toggle-eye:hover {
+    color: #38bdf8;
+  }
+
+  .account-signup {
+    margin-top: 20px;
+    font-size: 14px;
+    color: #9ca3af;
+  }
+
+  .signup-link {
+    color: #38bdf8;
+    text-decoration: none;
+    font-weight: 500;
+    border-bottom: 1px dashed #38bdf8;
+  }
+
+  .cards {
+    display: flex;
+    gap: 28px;
+    margin-top: 70px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    background: rgba(11, 22, 38, 0.75);
+    backdrop-filter: blur(4px);
+    padding: 28px 24px;
+    width: 300px;
+    border-radius: 28px;
+    text-align: left;
+    border: 1px solid rgba(51, 65, 85, 0.6);
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+  }
+
+  .card:hover {
+    transform: translateY(-6px);
+    border-color: #38bdf8;
+    background: rgba(20, 34, 58, 0.85);
+    box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.4);
+  }
+
+  .card h3 {
+    font-size: 1.5rem;
+    margin-bottom: 12px;
+    background: linear-gradient(120deg, #f1f5f9, #b9d0f0);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .card p {
+    color: #a0afc7;
+    line-height: 1.5;
+  }
+
+  .card-icon {
+    font-size: 32px;
+    margin-bottom: 16px;
+  }
+
+  .powered {
+    margin-top: 80px;
+    font-size: 12px;
+    color: #4b5563;
+    padding-top: 20px;
+    border-top: 1px solid #1e2a44;
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+  }
+
+  .powered span {
+    color: #38bdf8;
+    font-weight: 600;
+  }
+
+  .message-area {
+    margin-top: 20px;
+    padding: 12px;
+    border-radius: 12px;
+    font-size: 14px;
+  }
+
+  .message-success {
+    background: rgba(34, 197, 94, 0.2);
+    color: #22c55e;
+    border: 1px solid #22c55e;
+  }
+
+  .message-error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid #ef4444;
+  }
+
+  .message-info {
+    background: rgba(56, 189, 248, 0.2);
+    color: #38bdf8;
+    border: 1px solid #38bdf8;
+  }
+
+  .balance-display {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 16px;
+    text-align: center;
+  }
+
+  .balance-amount {
+    font-size: 24px;
+    font-weight: bold;
+    color: #22c55e;
+  }
+
+  @media (max-width: 720px) {
+    .container {
+      padding: 24px 20px;
+    }
+    h1 {
+      font-size: 42px;
+    }
+    .topbar {
+      padding: 14px 20px;
+    }
+    .button {
+      padding: 10px 22px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo">
+    <span class="logo-icon">⚡</span>
+    <h2>Voltix • Deriv</h2>
+  </div>
+  <a href="marketsdash.html" class="back-btn">
+    ← Back to Markets
+  </a>
+</div>
+
+<div class="container">
+  <div class="badge-glow">🤖 AI-Powered Deriv Trading Signals</div>
+  <h1>Trade Deriv with <span class="highlight">Voltix AI</span></h1>
+  <p class="subtitle">
+    Precision execution, multi-contract intelligence, and real-time confidence analytics.
+  </p>
+
+  <div class="connect-panel">
+    <div class="section-title">
+      <span>⚡</span> Connect Your Deriv Account
+    </div>
+    
+    <button class="button" id="oauthBtn">
+      🔵 Connect via Deriv OAuth (Recommended)
+    </button>
+    
+    <div class="or-divider">
+      <hr> <span>secure alternative</span> <hr>
+    </div>
+
+    <div class="token-box">
+      <div class="password-wrapper">
+        <input type="password" id="apiToken" placeholder="Paste your Deriv API token (read/trade)">
+        <button class="toggle-eye" onclick="toggleTokenVisibility()">👁️</button>
+      </div>
+      <button class="button secondary-btn" id="connectBtn">
+        🔐 Connect with API Token
+      </button>
+      <div class="account-signup">
+        🚀 New to Deriv trading?
+        <a href="https://deriv.com/" target="_blank" class="signup-link">Open a free Deriv account →</a>
+      </div>
+    </div>
+    
+    <div id="messageArea" class="message-area" style="display: none;"></div>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">⚙️</div>
+      <h3>All Trades Engine</h3>
+      <p>Executes all types of trades with smart order flow and risk-aware logic.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📈</div>
+      <h3>High-Spec Analysis</h3>
+      <p>Real-time market analysis, confidence scoring & AI-driven entry points.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔒</div>
+      <h3>Secure Connection Layer</h3>
+      <p>OAuth + token authentication with encrypted infrastructure.</p>
+    </div>
+  </div>
+
+  <div class="powered">
+    Powered by <span>Deriv</span> — All trading actions executed on Deriv's official infrastructure. Trade responsibly.
+  </div>
+</div>
+
+<script>
+  const API_BASE_URL = 'http://localhost:5000/api';
+  
+  function toggleTokenVisibility() {
+    const tokenInput = document.getElementById('apiToken');
+    tokenInput.type = tokenInput.type === 'password' ? 'text' : 'password';
+  }
+  
+  function showMessage(message, type) {
+    const messageDiv = document.getElementById('messageArea');
+    messageDiv.style.display = 'block';
+    messageDiv.innerHTML = message;
+    messageDiv.className = 'message-area';
+    messageDiv.classList.add(`message-${type}`);
+    
+    setTimeout(() => {
+      messageDiv.style.display = 'none';
+    }, 5000);
+  }
+  
+  // Get JWT token from localStorage
+  function getAuthToken() {
+    return localStorage.getItem('token');
+  }
+  
+  // Check if user is logged in
+  function checkAuth() {
+    const token = getAuthToken();
+    if (!token) {
+      showMessage('Please login first to connect your Deriv account', 'error');
+      setTimeout(() => {
+        window.location.href = 'login.html';
+      }, 2000);
+      return false;
+    }
+    return true;
+  }
+  
+  // Connect with API Token
+  document.getElementById('connectBtn').addEventListener('click', async () => {
+    if (!checkAuth()) return;
+    
+    const apiToken = document.getElementById('apiToken').value.trim();
+    const accountType = 'Demo'; // Can be 'Real' or 'Demo'
+    
+    if (!apiToken) {
+      showMessage('⚠️ Please paste your Deriv API token', 'error');
+      return;
+    }
+    
+    const connectBtn = document.getElementById('connectBtn');
+    const originalText = connectBtn.innerHTML;
+    connectBtn.innerHTML = '🔄 Connecting...';
+    connectBtn.disabled = true;
+    
+    try {
+      const token = getAuthToken();
+      const response = await fetch(`${API_BASE_URL}/deriv/connect`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          api_token: apiToken,
+          account_type: accountType
+        })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        showMessage(`✅ ${data.message}!\n\nAccount ID: ${data.account.account_id}\nBalance: $${data.account.balance} ${data.account.currency}`, 'success');
+        
+        // Store connection info in localStorage
+        localStorage.setItem('deriv_connected', 'true');
+        localStorage.setItem('deriv_account_id', data.account.account_id);
+        localStorage.setItem('deriv_balance', data.account.balance);
+        
+        // Redirect to trading dashboard after 2 seconds
+        setTimeout(() => {
+          window.location.href = 'derivdash.html';
+        }, 2000);
+      } else {
+        showMessage(`❌ Connection failed: ${data.error}`, 'error');
+        connectBtn.innerHTML = originalText;
+        connectBtn.disabled = false;
+      }
+    } catch (error) {
+      console.error('Connection error:', error);
+      showMessage(`❌ Cannot connect to server. Please make sure the backend is running.`, 'error');
+      connectBtn.innerHTML = originalText;
+      connectBtn.disabled = false;
+    }
+  });
+  
+  // OAuth button (coming soon)
+  document.getElementById('oauthBtn').addEventListener('click', () => {
+    showMessage('🔐 Deriv OAuth integration coming soon! Please use API token for now.', 'info');
+  });
+</script>
+</body>
+</html>

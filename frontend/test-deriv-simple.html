@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Deriv Connection - Simple</title>
+    <style>
+        body {
+            font-family: Arial;
+            background: #0a1428;
+            color: white;
+            padding: 40px;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: #1e293b;
+            padding: 30px;
+            border-radius: 20px;
+        }
+        input, button {
+            width: 100%;
+            padding: 12px;
+            margin: 10px 0;
+            border-radius: 8px;
+            border: none;
+            box-sizing: border-box;
+        }
+        button {
+            background: #22c55e;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .result {
+            background: #0f172a;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .success { color: #22c55e; }
+        .error { color: #ef4444; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>🔧 Test Deriv Connection (No JWT Required)</h2>
+    
+    <label>Your Deriv API Token</label>
+    <input type="password" id="derivToken" placeholder="Z_cb...">
+    
+    <label>Account Type</label>
+    <select id="accountType">
+        <option value="Demo">Demo Account</option>
+        <option value="Real">Real Account</option>
+    </select>
+    
+    <button onclick="testConnection()">Test Connection</button>
+    
+    <div class="result" id="result">Click the button to test...</div>
+</div>
+
+<script>
+    async function testConnection() {
+        const derivToken = document.getElementById('derivToken').value;
+        const accountType = document.getElementById('accountType').value;
+        const resultDiv = document.getElementById('result');
+        
+        if (!derivToken) {
+            resultDiv.innerHTML = '<span class="error">❌ Please enter your Deriv API token</span>';
+            return;
+        }
+        
+        resultDiv.innerHTML = '⏳ Connecting to Deriv...';
+        
+        try {
+            const response = await fetch('http://localhost:5000/api/deriv/test-connect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    api_token: derivToken,
+                    account_type: accountType
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                resultDiv.innerHTML = '<span class="success">✅ SUCCESS!</span><br><br>' + JSON.stringify(data, null, 2);
+            } else {
+                resultDiv.innerHTML = '<span class="error">❌ FAILED!</span><br><br>' + JSON.stringify(data, null, 2);
+            }
+        } catch (error) {
+            resultDiv.innerHTML = '<span class="error">❌ ERROR: ' + error.message + '</span>';
+        }
+    }
+</script>
+</body>
+</html>

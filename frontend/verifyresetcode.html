@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Voltix • Verify Code</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Inter', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(ellipse at 30% 20%, #0a1428, #02040c);
+    color: white;
+    padding: 20px;
+  }
+  .container {
+    max-width: 450px;
+    width: 100%;
+    padding: 44px 40px;
+    background: rgba(8, 18, 38, 0.85);
+    backdrop-filter: blur(18px);
+    border-radius: 52px;
+    text-align: center;
+    border: 1px solid rgba(34, 197, 94, 0.2);
+  }
+  .logo {
+    font-size: 1.8rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #22c55e, #38bdf8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin-bottom: 20px;
+  }
+  h2 { margin-bottom: 10px; }
+  .subhead { color: #9ca3af; font-size: 0.85rem; margin-bottom: 30px; }
+  .input-group { text-align: center; margin-bottom: 24px; }
+  label { font-size: 13px; color: #cbd5e1; display: block; margin-bottom: 8px; }
+  input {
+    width: 100%;
+    max-width: 200px;
+    padding: 14px 16px;
+    border-radius: 32px;
+    border: 1.5px solid rgba(255,255,255,0.08);
+    background: #0a122a;
+    color: white;
+    font-size: 24px;
+    text-align: center;
+    letter-spacing: 5px;
+    outline: none;
+    margin: 0 auto;
+    display: block;
+  }
+  input:focus { border-color: #22c55e; }
+  button {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 40px;
+    background: linear-gradient(105deg, #22c55e, #16a34a);
+    color: #0a0f1f;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  button:hover { transform: translateY(-2px); }
+  .message {
+    margin-top: 20px;
+    font-size: 13px;
+    padding: 10px;
+    border-radius: 60px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+  .resend { margin-top: 15px; }
+  .resend a { color: #3b82f6; cursor: pointer; font-size: 13px; text-decoration: none; }
+  .back-link { margin-top: 20px; font-size: 13px; }
+  .back-link a { color: #3b82f6; text-decoration: none; }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">⚡ Voltix</div>
+  <h2>Enter Verification Code</h2>
+  <p class="subhead">We sent a 6-digit code to your email</p>
+  
+  <form id="verifyForm">
+    <div class="input-group">
+      <label>📧 Verification Code</label>
+      <input type="text" id="code" maxlength="6" placeholder="000000" required autofocus>
+    </div>
+    <button type="submit">Verify Code →</button>
+  </form>
+  
+  <div class="resend"><a id="resendLink">⟳ Didn't receive code? Resend</a></div>
+  <div class="message" id="message"></div>
+  <div class="back-link"><a href="forgotpass.html">← Back</a></div>
+</div>
+
+<script>
+const API_BASE = 'http://localhost:5000/api';
+
+const email = sessionStorage.getItem('resetEmail');
+if (!email) {
+  window.location.href = 'forgotpass.html';
+}
+
+document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  
+  const code = document.getElementById('code').value.trim();
+  const messageDiv = document.getElementById('message');
+  
+  if (!code || code.length !== 6) {
+    messageDiv.innerHTML = '❌ Please enter the 6-digit verification code';
+    messageDiv.style.color = '#f87171';
+    return;
+  }
+  
+  messageDiv.innerHTML = '⏳ Verifying code...';
+  messageDiv.style.color = '#94a3b8';
+  
+  try {
+    const response = await fetch(`${API_BASE}/auth/verify-reset-code`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, code })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      sessionStorage.setItem('resetToken', data.reset_token);
+      messageDiv.innerHTML = '✅ Code verified! Redirecting...';
+      messageDiv.style.color = '#22c55e';
+      setTimeout(() => {
+        window.location.href = 'resetpass.html';
+      }, 1500);
+    } else {
+      messageDiv.innerHTML = `❌ ${data.error}`;
+      messageDiv.style.color = '#f87171';
+    }
+  } catch (error) {
+    messageDiv.innerHTML = '❌ Cannot connect to server';
+    messageDiv.style.color = '#f87171';
+  }
+});
+
+document.getElementById('resendLink').addEventListener('click', async () => {
+  const messageDiv = document.getElementById('message');
+  messageDiv.innerHTML = '⏳ Resending code...';
+  messageDiv.style.color = '#94a3b8';
+  
+  try {
+    const response = await fetch(`${API_BASE}/auth/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      messageDiv.innerHTML = '✅ New code sent to your email!';
+      messageDiv.style.color = '#22c55e';
+    } else {
+      messageDiv.innerHTML = `❌ ${data.error}`;
+      messageDiv.style.color = '#f87171';
+    }
+  } catch (error) {
+    messageDiv.innerHTML = '❌ Cannot connect to server';
+    messageDiv.style.color = '#f87171';
+  }
+});
+</script>
+</body>
+</html>

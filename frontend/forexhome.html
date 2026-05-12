@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>⚡ Voltix FX | AI Forex Intelligence</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Poppins', sans-serif;
+    background: linear-gradient(145deg, #051a24 0%, #020c14 100%);
+    color: #eef5ff;
+    line-height: 1.4;
+    scroll-behavior: smooth;
+  }
+
+  ::-webkit-scrollbar {
+    width: 5px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #092c3b;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #2dd4bf;
+    border-radius: 20px;
+  }
+
+  .topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 48px;
+    background: rgba(2, 20, 30, 0.85);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(45, 212, 191, 0.3);
+    position: sticky;
+    top: 0;
+    z-index: 99;
+  }
+
+  .logo-area {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-icon {
+    font-size: 32px;
+    filter: drop-shadow(0 0 5px #2dd4bf);
+  }
+
+  .logo-area h2 {
+    font-size: 1.8rem;
+    font-weight: 700;
+    background: linear-gradient(120deg, #cffafe, #2dd4bf);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    letter-spacing: -0.5px;
+  }
+
+  .market-badge {
+    background: #0b2b2f;
+    padding: 8px 18px;
+    border-radius: 40px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #99f6e4;
+    border: 1px solid #2dd4bf40;
+    backdrop-filter: blur(4px);
+  }
+
+  .back-btn {
+    background: #1e293b;
+    border: 1px solid #334155;
+    border-radius: 40px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+
+  .back-btn:hover {
+    background: #2d3a5e;
+    border-color: #2dd4bf;
+    color: white;
+  }
+
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 40px 32px 60px;
+    text-align: center;
+  }
+
+  .glass-pulse {
+    display: inline-block;
+    background: linear-gradient(95deg, #0f2c38, #08212b);
+    padding: 6px 22px;
+    border-radius: 60px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    color: #5eead4;
+    margin-bottom: 28px;
+    border: 1px solid #2dd4bf66;
+    box-shadow: 0 2px 10px rgba(45,212,191,0.2);
+  }
+
+  h1 {
+    font-size: 64px;
+    font-weight: 800;
+    background: linear-gradient(135deg, #ffffff, #b0f3e8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+    margin: 16px 0 20px;
+    letter-spacing: -1px;
+  }
+
+  .highlight {
+    background: linear-gradient(145deg, #2dd4bf, #38bdf8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .subtitle {
+    font-size: 1.2rem;
+    color: #b9d9e6;
+    max-width: 720px;
+    margin: 0 auto 32px;
+    line-height: 1.5;
+  }
+
+  .btn-primary {
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: linear-gradient(115deg, #0f766e, #14b8a6);
+    padding: 14px 32px;
+    border-radius: 60px;
+    font-weight: 700;
+    font-size: 1rem;
+    border: none;
+    color: white;
+    cursor: not-allowed;
+    transition: all 0.25s ease;
+    box-shadow: 0 8px 18px rgba(20,184,166,0.3);
+    text-decoration: none;
+    opacity: 0.6;
+  }
+
+  .coming-soon-tag {
+    display: inline-block;
+    background: #2dd4bf20;
+    color: #2dd4bf;
+    font-size: 12px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-left: 12px;
+    font-weight: 600;
+  }
+
+  .signup-link {
+    color: #5eead4;
+    text-decoration: none;
+    font-weight: 600;
+    border-bottom: 1px dashed #2dd4bf;
+    transition: 0.2s;
+  }
+
+  .signup-link:hover {
+    color: white;
+    border-bottom-color: white;
+  }
+
+  .cards {
+    display: flex;
+    gap: 32px;
+    margin-top: 70px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .card {
+    background: rgba(8, 33, 43, 0.7);
+    backdrop-filter: blur(6px);
+    padding: 32px 24px;
+    width: 310px;
+    border-radius: 32px;
+    text-align: left;
+    border: 1px solid rgba(45,212,191,0.25);
+    transition: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.2);
+  }
+
+  .card:hover {
+    transform: translateY(-8px);
+    border-color: #2dd4bf;
+    background: #0a2d38cc;
+    box-shadow: 0 20px 30px -12px rgba(0, 0, 0, 0.5);
+  }
+
+  .card-icon {
+    font-size: 40px;
+    margin-bottom: 18px;
+  }
+
+  .card h3 {
+    font-size: 1.6rem;
+    margin-bottom: 12px;
+    font-weight: 600;
+    background: linear-gradient(145deg, #f0fdfa, #b4f0e3);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .card p {
+    color: #bbdfed;
+    line-height: 1.45;
+  }
+
+  .forex-news-ticker {
+    background: #06212b;
+    border-radius: 60px;
+    padding: 12px 24px;
+    margin: 48px auto 0;
+    max-width: 900px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    border: 1px solid #2dd4bf40;
+  }
+
+  .ticker-label {
+    font-weight: 700;
+    background: #115e59;
+    padding: 4px 14px;
+    border-radius: 40px;
+    font-size: 13px;
+  }
+
+  .ticker-text {
+    font-weight: 500;
+    color: #ccfbf1;
+    font-size: 14px;
+  }
+
+  .currency-pair {
+    background: #0a2f38;
+    padding: 5px 12px;
+    border-radius: 24px;
+    font-family: monospace;
+    font-weight: bold;
+    color: #2dd4bf;
+  }
+
+  .forex-footer {
+    margin-top: 80px;
+    background: radial-gradient(ellipse at 50% 0%, #03161e, #010a0f);
+    border-top: 1px solid #2dd4bf30;
+    padding: 48px 32px 32px;
+    border-radius: 48px 48px 0 0;
+  }
+
+  .footer-grid {
+    max-width: 1280px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 40px;
+    text-align: left;
+  }
+
+  .footer-col h4 {
+    color: #5eead4;
+    font-size: 1.2rem;
+    margin-bottom: 20px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    border-left: 3px solid #2dd4bf;
+    padding-left: 14px;
+  }
+
+  .footer-col p, .footer-col a {
+    font-size: 0.85rem;
+    color: #a5d8e6;
+    line-height: 1.6;
+    text-decoration: none;
+    display: block;
+    margin-bottom: 10px;
+    transition: 0.2s;
+  }
+
+  .footer-col a:hover {
+    color: #2dd4bf;
+    transform: translateX(4px);
+    display: inline-block;
+  }
+
+  .risk-warning {
+    background: #0b2027;
+    border-radius: 28px;
+    padding: 16px 24px;
+    margin-top: 40px;
+    font-size: 11px;
+    color: #7d9eaa;
+    text-align: center;
+    border: 1px solid #2c5a5f;
+  }
+
+  .social-icons {
+    display: flex;
+    gap: 22px;
+    margin-top: 16px;
+  }
+
+  .social-icons span {
+    font-size: 22px;
+    cursor: pointer;
+    transition: 0.2s;
+  }
+
+  .social-icons span:hover {
+    color: #2dd4bf;
+    transform: scale(1.1);
+  }
+
+  @media (max-width: 760px) {
+    .topbar {
+      padding: 14px 24px;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    h1 {
+      font-size: 42px;
+    }
+    .container {
+      padding: 30px 20px;
+    }
+    .forex-news-ticker {
+      flex-direction: column;
+      align-items: stretch;
+      text-align: center;
+    }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="logo-area">
+    <span class="logo-icon">⚡📊</span>
+    <h2>Voltix FX</h2>
+  </div>
+  <div class="market-badge">
+    📈 Forex | Crypto | Indices
+  </div>
+  <a href="marketsdash.html" class="back-btn">
+    ← Back to Markets
+  </a>
+</div>
+
+<div class="container">
+  <div class="glass-pulse">
+    🤖 AI-Powered Forex Precision • Real-time Liquidity
+  </div>
+  <h1>Dominate Forex with <span class="highlight">Adaptive AI</span></h1>
+  <p class="subtitle">
+    Voltix delivers institutional-grade signals, multi-contract execution, and deep FX market intelligence — all in one dashboard.
+  </p>
+
+  <button class="btn-primary" id="connectForexBtn" disabled>
+    🔗 Connect Forex Account → <span class="coming-soon-tag">COMING SOON</span>
+  </button>
+  
+  <div style="margin: 24px auto 10px;">
+    <div class="account-signup" style="font-size: 14px; color:#b9d9e6;">
+      🚀 New to forex? 
+      <a href="https://www.exness.com/" target="_blank" class="signup-link">Open real/pro demo account</a> 
+      — fast execution & tight spreads
+    </div>
+  </div>
+
+  <div class="forex-news-ticker" id="liveTicker">
+    <span class="ticker-label">💱 LIVE SPOT</span>
+    <span class="ticker-text" id="tickerPair">EUR/USD: 1.08924</span>
+    <span class="ticker-text" id="tickerPair2">GBP/JPY: 191.52</span>
+    <span class="currency-pair">🔥 Spreads from 0.0 pips</span>
+  </div>
+
+  <div class="cards">
+    <div class="card">
+      <div class="card-icon">🌊</div>
+      <h3>Smart Liquidity Engine</h3>
+      <p>Aggregates top-tier forex liquidity & minimizes slippage during high-impact news.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">📊</div>
+      <h3>AI Regime Detector</h3>
+      <p>Identifies trend, range, or breakout zones with 84% accuracy on major pairs.</p>
+    </div>
+    <div class="card">
+      <div class="card-icon">🔐</div>
+      <h3>One-Click OAuth</h3>
+      <p>Connect your broker (Exness, Deriv, Pepperstone) without API tokens — secure & instant.</p>
+    </div>
+  </div>
+</div>
+
+<footer class="forex-footer">
+  <div class="footer-grid">
+    <div class="footer-col">
+      <h4>📌 Voltix AI</h4>
+      <p>Next-gen Forex signal automation</p>
+      <p>Smart order routing • AI pattern recognition • Low latency execution</p>
+      <div class="social-icons">
+        <span>📘</span> <span>🐦</span> <span>📸</span> <span>💼</span>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>💱 Market Hours</h4>
+      <p>🇬🇧 London: 08:00 - 17:00 GMT</p>
+      <p>🇺🇸 New York: 13:00 - 22:00 GMT</p>
+      <p>🇯🇵 Tokyo: 00:00 - 09:00 GMT</p>
+      <p>🇦🇺 Sydney: 22:00 - 07:00 GMT</p>
+    </div>
+    <div class="footer-col">
+      <h4>📰 Forex Insights</h4>
+      <a href="#">NFP Impact Analysis</a>
+      <a href="#">Interest rate forecasts</a>
+      <a href="#">Gold & USD correlation</a>
+      <a href="#">Volatility outlook</a>
+    </div>
+    <div class="footer-col">
+      <h4>⚖️ Legal & Risk</h4>
+      <p>CFDs are complex instruments. 74-89% of retail accounts lose money. Trade responsibly.</p>
+      <p>© 2026 Voltix — AI Forex Intelligence</p>
+      <a href="#">Privacy policy</a>
+      <a href="#">Risk disclosure</a>
+    </div>
+  </div>
+  <div class="risk-warning">
+    ⚠️ HIGH RISK WARNING: Forex and CFD trading involves substantial risk of loss. Past performance is not indicative of future results. The AI signals are for educational & informational purposes only. Always consult a financial advisor.
+  </div>
+</footer>
+
+<script>
+  function startForexTicker() {
+    const pairs = [
+      { name: "EUR/USD", base: 1.0892, vol: 0.0003 },
+      { name: "GBP/JPY", base: 191.52, vol: 0.38 }
+    ];
+    setInterval(() => {
+      const pair1 = pairs[0];
+      const pair2 = pairs[1];
+      const newVal1 = (pair1.base + (Math.random() - 0.5) * pair1.vol).toFixed(5);
+      const newVal2 = (pair2.base + (Math.random() - 0.5) * pair2.vol).toFixed(2);
+      document.getElementById("tickerPair").innerHTML = `${pair1.name}: ${newVal1}`;
+      document.getElementById("tickerPair2").innerHTML = `${pair2.name}: ${newVal2}`;
+      pair1.base = parseFloat(newVal1);
+      pair2.base = parseFloat(newVal2);
+    }, 3800);
+  }
+
+  startForexTicker();
+
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(card => {
+    card.addEventListener('click', () => {
+      alert(`🔍 ${card.querySelector('h3')?.innerText} feature: Available when Forex integration launches.`);
+    });
+  });
+
+  const existingPairs = document.querySelector('.currency-pair');
+  if (existingPairs) {
+    setInterval(() => {
+      const spreads = ["0.1 pips", "0.2 pips", "0.0 pips", "0.3 pips"];
+      const randomSpread = spreads[Math.floor(Math.random() * spreads.length)];
+      existingPairs.innerHTML = `⚡ Spreads from ${randomSpread}`;
+    }, 9000); 
+  }
+</script>
+</body>
+</html>

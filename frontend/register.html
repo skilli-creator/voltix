@@ -1,0 +1,416 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Voltix • Create Account</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', 'Poppins', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: radial-gradient(ellipse at 30% 20%, #0a1428, #02040c);
+    color: #f1f5f9;
+    padding: 20px;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: radial-gradient(rgba(34, 197, 94, 0.05) 1px, transparent 1px);
+    background-size: 35px 35px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .register-container {
+    width: 100%;
+    max-width: 480px;
+    padding: 44px 40px;
+    background: rgba(8, 18, 38, 0.85);
+    backdrop-filter: blur(18px);
+    border-radius: 52px;
+    box-shadow: 0 30px 55px -15px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(34, 197, 94, 0.2);
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    animation: fadeSlideUp 0.6s ease;
+  }
+
+  .logo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    padding: 8px 22px;
+    border-radius: 60px;
+    margin-bottom: 28px;
+    font-weight: 700;
+    font-size: 14px;
+    color: #0a0f1f;
+  }
+
+  .register-container h2 {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 8px;
+    background: linear-gradient(135deg, #ffffff, #94a3b8);
+    background-clip: text;
+    -webkit-background-clip: text;
+    color: transparent;
+  }
+
+  .subhead {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    margin-bottom: 32px;
+  }
+
+  .input-group {
+    margin-bottom: 22px;
+    text-align: left;
+  }
+
+  .input-group label {
+    font-size: 13px;
+    font-weight: 500;
+    color: #cbd5e1;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .input-group input {
+    width: 100%;
+    padding: 14px 16px;
+    border-radius: 32px;
+    border: 1.5px solid rgba(255, 255, 255, 0.08);
+    background: #0a122a;
+    color: white;
+    font-size: 14px;
+    outline: none;
+    transition: all 0.2s ease;
+    font-family: inherit;
+  }
+
+  .input-group input:focus {
+    border-color: #22c55e;
+    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+    background: #0f1838;
+  }
+
+  .name-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+
+  .password-wrapper {
+    position: relative;
+  }
+
+  .toggle-password {
+    position: absolute;
+    right: 16px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #9ca3af;
+  }
+
+  .strength-meter {
+    margin-top: 8px;
+    height: 4px;
+    background: #1e293b;
+    border-radius: 4px;
+    overflow: hidden;
+  }
+
+  .strength-fill {
+    width: 0%;
+    height: 100%;
+    transition: width 0.3s ease;
+  }
+
+  .strength-text {
+    font-size: 10px;
+    margin-top: 6px;
+    color: #9ca3af;
+  }
+
+  .register-btn {
+    width: 100%;
+    padding: 14px;
+    border: none;
+    border-radius: 40px;
+    background: linear-gradient(105deg, #22c55e, #16a34a);
+    color: #0a0f1f;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    margin-top: 12px;
+  }
+
+  .register-btn:hover {
+    transform: translateY(-2px);
+    background: linear-gradient(105deg, #2dd4bf, #22c55e);
+  }
+
+  .message-area {
+    margin-top: 18px;
+    font-size: 13px;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 60px;
+    background: rgba(0, 0, 0, 0.3);
+  }
+
+  .login-link {
+    margin-top: 28px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+
+  .login-link a {
+    color: #22c55e;
+    text-decoration: none;
+    font-weight: 600;
+  }
+
+  @keyframes fadeSlideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @media (max-width: 520px) {
+    .register-container { padding: 32px 24px; margin: 16px; }
+    .register-container h2 { font-size: 1.6rem; }
+    .name-row { grid-template-columns: 1fr; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="register-container">
+  <div class="logo-badge">⚡ Voltix • Join the future</div>
+  <h2>Create Account</h2>
+  <p class="subhead">Start your automated trading journey</p>
+
+  <form id="registerForm">
+    <div class="name-row">
+      <div class="input-group">
+        <label>📝 First Name</label>
+        <input type="text" id="firstName" placeholder="John" required>
+      </div>
+
+      <div class="input-group">
+        <label>📝 Last Name</label>
+        <input type="text" id="lastName" placeholder="Doe" required>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label>📞 Phone Number</label>
+      <input type="tel" id="phoneNumber" placeholder="+1 234 567 8900" required>
+      <div style="font-size: 10px; color: #6b7280; margin-top: 4px;">Include country code (e.g., +1, +44)</div>
+    </div>
+
+    <div class="input-group">
+      <label>📧 Email Address</label>
+      <input type="email" id="email" placeholder="trader@example.com" required>
+    </div>
+
+    <div class="input-group">
+      <label>🔒 Password</label>
+      <div class="password-wrapper">
+        <input type="password" id="password" required>
+        <button type="button" class="toggle-password" data-target="password">👁️</button>
+      </div>
+      <div class="strength-meter">
+        <div class="strength-fill" id="strengthFill"></div>
+      </div>
+      <div class="strength-text" id="strengthLabel">Enter a strong password</div>
+    </div>
+
+    <div class="input-group">
+      <label>✓ Confirm Password</label>
+      <div class="password-wrapper">
+        <input type="password" id="confirmPassword" required>
+        <button type="button" class="toggle-password" data-target="confirmPassword">👁️</button>
+      </div>
+    </div>
+
+    <button class="register-btn" type="submit">🚀 Register & Start Trading</button>
+  </form>
+
+  <div class="message-area" id="registerMessage"></div>
+
+  <div class="login-link">
+    Already have an account? <a href="login.html">Sign in →</a>
+  </div>
+</div>
+
+<script>
+  const API_BASE_URL = 'http://localhost:5000/api';
+
+  // Password strength checker
+  const passwordInput = document.getElementById('password');
+  const strengthFill = document.getElementById('strengthFill');
+  const strengthLabel = document.getElementById('strengthLabel');
+
+  function checkStrength(pw) {
+    let score = 0;
+    if (pw.length >= 6) score++;
+    if (pw.length >= 10) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/[0-9]/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+    
+    const widthMap = ['0%', '20%', '40%', '60%', '80%', '100%'];
+    const colorMap = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#22c55e', '#2dd4bf'];
+    const textMap = ['Very weak', 'Weak', 'Fair', 'Good', 'Strong', 'Very strong'];
+    
+    strengthFill.style.width = widthMap[score];
+    strengthFill.style.backgroundColor = colorMap[score];
+    strengthLabel.innerText = textMap[score];
+    return score;
+  }
+
+  passwordInput.addEventListener('input', (e) => checkStrength(e.target.value));
+
+  // Toggle password visibility
+  document.querySelectorAll('.toggle-password').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const targetId = btn.getAttribute('data-target');
+      const input = document.getElementById(targetId);
+      if (input.type === 'password') {
+        input.type = 'text';
+        btn.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        btn.textContent = '👁️';
+      }
+    });
+  });
+
+  function validatePhone(phone) {
+    const digits = phone.replace(/\D/g, '');
+    return digits.length >= 8 && digits.length <= 15;
+  }
+
+  document.getElementById("registerForm").addEventListener("submit", async function(e) {
+    e.preventDefault();
+
+    const firstName = document.getElementById("firstName").value.trim();
+    const lastName = document.getElementById("lastName").value.trim();
+    const phoneNumber = document.getElementById("phoneNumber").value.trim();
+    const email = document.getElementById("email").value.trim();
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    const messageDiv = document.getElementById("registerMessage");
+
+    // Validation
+    if (!firstName || !lastName) {
+      messageDiv.innerHTML = "❌ First name and last name are required";
+      messageDiv.style.color = "#f87171";
+      return;
+    }
+
+    if (!phoneNumber || !email || !password) {
+      messageDiv.innerHTML = "❌ All fields are required";
+      messageDiv.style.color = "#f87171";
+      return;
+    }
+
+    if (!validatePhone(phoneNumber)) {
+      messageDiv.innerHTML = "❌ Please enter a valid phone number with country code";
+      messageDiv.style.color = "#f87171";
+      return;
+    }
+
+    if (!email.includes('@') || !email.includes('.')) {
+      messageDiv.innerHTML = "❌ Please enter a valid email address";
+      messageDiv.style.color = "#f87171";
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      messageDiv.innerHTML = "❌ Passwords do not match";
+      messageDiv.style.color = "#f87171";
+      return;
+    }
+
+    if (password.length < 6) {
+      messageDiv.innerHTML = "⚠️ Password must be at least 6 characters";
+      messageDiv.style.color = "#fbbf24";
+      return;
+    }
+
+    const strengthScore = checkStrength(password);
+    if (strengthScore < 2) {
+      messageDiv.innerHTML = "⚠️ Please choose a stronger password";
+      messageDiv.style.color = "#fbbf24";
+      return;
+    }
+
+    messageDiv.innerHTML = "⏳ Creating your account...";
+    messageDiv.style.color = "#94a3b8";
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          first_name: firstName,
+          last_name: lastName,
+          phone: phoneNumber,
+          email: email,
+          password: password
+        })
+      });
+
+      const data = await response.json();
+
+      if (response.status === 201) {
+        localStorage.setItem('tempUserId', data.user_id);
+        localStorage.setItem('userEmail', email);
+        
+        messageDiv.innerHTML = "✅ Account created! Check your email for verification code.";
+        messageDiv.style.color = "#22c55e";
+        
+        setTimeout(() => {
+          window.location.href = "authentication.html";
+        }, 2000);
+      } else {
+        messageDiv.innerHTML = `❌ ${data.error || 'Registration failed'}`;
+        messageDiv.style.color = "#f87171";
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      messageDiv.innerHTML = "❌ Cannot connect to server. Please make sure the backend is running on port 5000.";
+      messageDiv.style.color = "#f87171";
+    }
+  });
+</script>
+</body>
+</html>

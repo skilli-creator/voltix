@@ -30,6 +30,52 @@
         }
         .logo { font-size: 1.5rem; font-weight: 800; background: linear-gradient(135deg, #22c55e, #38bdf8); -webkit-background-clip: text; background-clip: text; color: transparent; }
         .account-info { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; }
+        
+        /* Account Switcher Styles */
+        .account-switcher { position: relative; }
+        .switch-account-btn {
+            background: rgba(56, 189, 248, 0.15);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 6px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            transition: 0.2s;
+            color: #38bdf8;
+            font-weight: 600;
+            font-size: 13px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .switch-account-btn:hover { background: rgba(56, 189, 248, 0.3); transform: translateY(-2px); }
+        .account-dropdown {
+            position: absolute;
+            top: 45px;
+            right: 0;
+            background: #1e293b;
+            border-radius: 16px;
+            padding: 8px;
+            min-width: 240px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+            border: 1px solid rgba(56,189,248,0.2);
+            z-index: 100;
+            backdrop-filter: blur(10px);
+        }
+        .dropdown-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            border-radius: 12px;
+            transition: 0.2s;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-item:hover { background: #0f172a; }
+        .dropdown-account-type { font-weight: 600; }
+        .dropdown-account-type.demo { color: #facc15; }
+        .dropdown-account-type.real { color: #22c55e; }
+        .dropdown-balance { font-size: 12px; color: #22c55e; }
+        
         .email-display { background: rgba(56, 189, 248, 0.15); padding: 6px 18px; border-radius: 40px; border: 1px solid rgba(56, 189, 248, 0.3); font-size: 13px; }
         .balance-display { background: rgba(34,197,94,0.15); padding: 6px 18px; border-radius: 40px; border: 1px solid rgba(34,197,94,0.3); }
         .balance-value { color: #22c55e; font-weight: 700; }
@@ -241,6 +287,12 @@
 <div class="topbar">
     <div class="logo">⚡ Voltix | Automated Terminal</div>
     <div class="account-info">
+        <div class="account-switcher">
+            <button class="switch-account-btn" id="switchAccountBtn">🔄 Switch Account ▼</button>
+            <div class="account-dropdown" id="accountDropdown" style="display: none;">
+                <div class="dropdown-loading">Loading accounts...</div>
+            </div>
+        </div>
         <div class="email-display" id="derivEmail">📧 loading...</div>
         <div class="balance-display">💰 <span id="balance" class="balance-value">$0.00</span></div>
         <div class="account-badge" id="accountId">---</div>
@@ -263,7 +315,7 @@
                     <optgroup label="Standard Volatility">
                         <option value="R_10">Volatility 10</option><option value="R_25">Volatility 25</option>
                         <option value="R_30">Volatility 30</option><option value="R_50">Volatility 50</option>
-                        <option value="R_75">Volatility 75</option><option value="R_90">Volatility 90</option>
+                        <option value="R_75" selected>Volatility 75</option><option value="R_90">Volatility 90</option>
                     </optgroup>
                     <optgroup label="Fast Markets (1s)">
                         <option value="1HZ10V">Volatility 10 (1s)</option><option value="1HZ25V">Volatility 25 (1s)</option>
@@ -326,7 +378,7 @@
             <div class="stat-card"><div class="stat-title">Net Profit</div><div class="stat-number" id="netProfit">$0</div></div>
         </div>
         <div style="overflow-x:auto;">
-            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyBody"><td><td colspan="6" style="text-align:center;">No trades this session</td></tr></tbody>
+            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></table></thead><tbody id="historyBody"><tr><td colspan="6" style="text-align:center;">No trades this session</td></tr></tbody>
             </table>
         </div>
     </div>
@@ -334,17 +386,9 @@
 
 <script>
     // ============================================================
-    // CONFIGURATION - CHANGE THIS TO YOUR BACKEND URL
+    // CONFIGURATION
     // ============================================================
-    // For development on same computer:
     const API_BASE = 'http://192.168.1.106:5000/api';
-    
-    // For testing on phone (same WiFi) - uncomment and use your PC's IP:
-    // const API_BASE = 'http://192.168.1.100:5000/api';
-    
-    // For production (deployed backend):
-    // const API_BASE = 'https://your-backend.onrender.com/api';
-    // ============================================================
     
     let botActive = false;
     let botLoopInterval = null;
@@ -365,7 +409,91 @@
     }
 
     // ============================================================
-    // ACCOUNT INFO - Fetches real balance from backend
+    // ACCOUNT SWITCHER FUNCTIONS
+    // ============================================================
+    async function fetchAccounts() {
+        try {
+            const res = await fetch(`${API_BASE}/deriv/accounts`, {
+                headers: { 'Authorization': `Bearer ${getToken()}` }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                return data.accounts || [];
+            }
+            return [];
+        } catch(e) {
+            console.warn(e);
+            return [];
+        }
+    }
+
+    async function switchAccount(accountId, accountType) {
+        try {
+            const res = await fetch(`${API_BASE}/deriv/switch-account`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${getToken()}`
+                },
+                body: JSON.stringify({ account_id: accountId, account_type: accountType })
+            });
+            if (res.ok) {
+                const data = await res.json();
+                showNotification(`✅ Switched to ${accountType} account`, 'success');
+                await fetchAccountInfo();
+                return true;
+            }
+            return false;
+        } catch(e) {
+            showNotification('❌ Failed to switch account', 'error');
+            return false;
+        }
+    }
+
+    async function loadAccountSwitcher() {
+        const accounts = await fetchAccounts();
+        const dropdown = document.getElementById('accountDropdown');
+        
+        if (accounts.length > 0) {
+            dropdown.innerHTML = accounts.map(acc => `
+                <div class="dropdown-item" data-account-id="${acc.account_id}" data-account-type="${acc.account_type}">
+                    <span class="dropdown-account-type ${acc.account_type.toLowerCase()}">
+                        ${acc.account_type === 'Real' ? '💰 REAL Account' : '🎮 DEMO Account'}
+                    </span>
+                    <span class="dropdown-balance">$${acc.balance.toFixed(2)}</span>
+                </div>
+            `).join('');
+            
+            // Add click handlers
+            document.querySelectorAll('.dropdown-item').forEach(item => {
+                item.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    const accountId = item.getAttribute('data-account-id');
+                    const accountType = item.getAttribute('data-account-type');
+                    switchAccount(accountId, accountType);
+                    document.getElementById('accountDropdown').style.display = 'none';
+                });
+            });
+        } else {
+            dropdown.innerHTML = '<div class="dropdown-item" style="justify-content:center;">No accounts found</div>';
+        }
+    }
+
+    // Toggle dropdown
+    document.getElementById('switchAccountBtn').addEventListener('click', (e) => {
+        e.stopPropagation();
+        const dropdown = document.getElementById('accountDropdown');
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+        loadAccountSwitcher();
+    });
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', () => {
+        document.getElementById('accountDropdown').style.display = 'none';
+    });
+
+    // ============================================================
+    // ACCOUNT INFO - Fetches real balance and email from backend
     // ============================================================
     async function fetchAccountInfo() {
         try {
@@ -377,11 +505,13 @@
                 document.getElementById('balance').innerText = `$${data.balance.toFixed(2)}`;
                 document.getElementById('accountId').innerText = data.account_id || '---';
                 document.getElementById('accountTypeBadge').innerHTML = data.account_type === 'Real' ? '💰 REAL' : '🎮 DEMO';
-                document.getElementById('derivEmail').innerHTML = `📧 ${data.account_id ? `${data.account_id}@deriv.com` : 'Not connected'}`;
+                
+                const userEmail = data.email || 'Not connected';
+                document.getElementById('derivEmail').innerHTML = `📧 ${userEmail}`;
                 
                 const withdrawBtn = document.getElementById('withdrawBtn');
                 if (data.account_type === 'Real') {
-                    withdrawBtn.href = 'https://app.deriv.com/cashier/withdrawal';
+                    withdrawBtn.href = 'https://hub.deriv.com/tradershub/wallets/recent-transactions?account=real';
                     withdrawBtn.classList.remove('disabled');
                     withdrawBtn.onclick = null;
                 } else {
@@ -421,20 +551,15 @@
         badge.innerText = 'Analyzing...';
         
         try {
-            // Call the appropriate backend endpoint based on trade type
             const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType);
-            let endpoint = '';
-            let analysisData = null;
             
             if (isDigitType) {
-                // Fetch digit analysis for digit-based trades
-                endpoint = `${API_BASE}/bot/market-analysis/digits?symbol=${market}`;
-                const res = await fetch(endpoint, { 
+                const res = await fetch(`${API_BASE}/bot/market-analysis/digits?symbol=${market}`, { 
                     headers: { 'Authorization': `Bearer ${getToken()}` } 
                 });
                 if (res.ok) {
-                    analysisData = await res.json();
-                    const digits = analysisData.digits || [];
+                    const data = await res.json();
+                    const digits = data.digits || [];
                     if (digits.length) {
                         const maxIdx = digits.reduce((iMax, x, i, arr) => x.percentage > arr[iMax].percentage ? i : iMax, 0);
                         const minIdx = digits.reduce((iMin, x, i, arr) => x.percentage < arr[iMin].percentage ? i : iMin, 0);
@@ -448,31 +573,24 @@
                                 </div>
                                 <div class="analysis-text">
                                     <p>Digit ${digits[maxIdx].digit} shows highest frequency (${digits[maxIdx].percentage}%). 
-                                    ${digits[maxIdx].digit % 2 === 0 ? 'Even' : 'Odd'} numbers currently dominate.
-                                    Recommended: ${digits[maxIdx].digit % 2 === 0 ? 'EVEN' : 'ODD'} for next tick.</p>
+                                    ${digits[maxIdx].digit % 2 === 0 ? 'Even' : 'Odd'} numbers currently dominate.</p>
                                 </div>
                             </div>
                         `;
                         badge.innerText = 'Digit Analysis';
-                    } else {
-                        container.innerHTML = '<div class="analysis-text"><p>No digit data available</p></div>';
                     }
-                } else {
-                    throw new Error('Failed to fetch digit analysis');
                 }
             } else {
-                // Fetch price analysis for Rise/Fall or Higher/Lower
-                endpoint = `${API_BASE}/bot/market-analysis/price?symbol=${market}`;
-                const res = await fetch(endpoint, { 
+                const res = await fetch(`${API_BASE}/bot/market-analysis/price?symbol=${market}`, { 
                     headers: { 'Authorization': `Bearer ${getToken()}` } 
                 });
                 if (res.ok) {
-                    analysisData = await res.json();
+                    const data = await res.json();
                     container.innerHTML = `
                         <div class="price-panel">
-                            <div class="price-big">$${analysisData.current_price || '---'}</div>
+                            <div class="price-big">$${data.current_price || '---'}</div>
                             <div class="price-change">Live</div>
-                            <div style="margin-top:16px; font-size:12px;">${analysisData.symbol}</div>
+                            <div style="margin-top:16px; font-size:12px;">${data.symbol}</div>
                         </div>
                         <div class="analysis-text">
                             <p>📊 Real-time price feed from Deriv.<br>
@@ -480,13 +598,11 @@
                         </div>
                     `;
                     badge.innerText = 'Price Analysis';
-                } else {
-                    throw new Error('Failed to fetch price analysis');
                 }
             }
         } catch (error) {
             console.error('Analysis error:', error);
-            container.innerHTML = `<div class="analysis-text"><p>❌ Failed to fetch market analysis. Make sure backend is running.</p></div>`;
+            container.innerHTML = `<div class="analysis-text"><p>❌ Failed to fetch market analysis.</p></div>`;
             badge.innerText = 'Error';
         }
     }
@@ -608,7 +724,6 @@
         return valid; 
     }
     
-    // Session trades display
     function updateHistoryDisplay() {
         const tbody = document.getElementById('historyBody');
         tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades this session</td></tr>';

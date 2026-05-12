@@ -4,6 +4,9 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from models.database import db
 from services.deriv_service import DerivService
 import logging
+import threading
+import json
+import websocket
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -140,8 +143,199 @@ def get_balance():
         'balance': balance,
         'currency': currency,
         'account_id': loginid or account['account_id'],
-        'account_type': account_type
+        'account_type': account_type,
+        'email': account.get('email', '')
     }), 200
+
+
+@deriv_bp.route('/accounts', methods=['GET'])
+@jwt_required()
+def get_accounts():
+    """Get all accounts (Real and Demo) for the user"""
+    user_id = get_jwt_identity()
+    
+    conn = db.get_connection()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT token FROM deriv_accounts 
+        WHERE user_id = %s AND is_active = 1
+    """, (user_id,))
+    account = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if not account:
+        return jsonify({'error': 'No Deriv account connected'}), 404
+    
+    api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
+    
+    # Get account list from Deriv API
+    result = {"success": False, "accounts": [], "error": None}
+    response_received = threading.Event()
+    
+    def on_message(ws, message):
+        data = json.loads(message)
+        print(f"📨 Accounts Response: {data}")
+        
+        if data.get('authorize'):
+            account_list = data['authorize'].get('account_list', [])
+            accounts = []
+            for acc in account_list:
+                if acc.get('account_category') == 'trading':
+                    accounts.append({
+                        'account_id': acc.get('loginid'),
+                        'account_type': 'Demo' if acc.get('is_virtual') else 'Real',
+                        'balance': acc.get('balance', 0),
+                        'currency': acc.get('currency', 'USD'),
+                        'is_virtual': acc.get('is_virtual', 1)
+                    })
+            result["success"] = True
+            result["accounts"] = accounts
+            response_received.set()
+            ws.close()
+        elif data.get('error'):
+            result["error"] = data['error']['message']
+            response_received.set()
+            ws.close()
+    
+    def on_error(ws, error):
+        result["error"] = str(error)
+        response_received.set()
+    
+    def on_open(ws):
+        ws.send(json.dumps({"authorize": api_token}))
+    
+    ws_url = f"wss://ws.derivws.com/websockets/v3?app_id=1089"
+    ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
+    
+    wst = threading.Thread(target=ws.run_forever)
+    wst.daemon = True
+    wst.start()
+    
+    response_received.wait(timeout=10)
+    
+    try:
+        ws.close()
+    except:
+        pass
+    
+    if result["success"]:
+        return jsonify({
+            'accounts': result['accounts'],
+            'current_account': None
+        }), 200
+    else:
+        return jsonify({'error': result['error'] or 'Failed to get accounts'}), 500
+
+
+@deriv_bp.route('/switch-account', methods=['POST'])
+@jwt_required()
+def switch_account():
+    """Switch to a different Deriv account by re-authorizing with that account"""
+    user_id = get_jwt_identity()
+    data = request.json
+    
+    new_account_id = data.get('loginid')
+    account_type = data.get('account_type', 'Demo')
+    
+    if not new_account_id:
+        return jsonify({'error': 'Account loginid required'}), 400
+    
+    # Get user's API token from database
+    conn = db.get_connection()
+    if not conn:
+        return jsonify({'error': 'Database error'}), 500
+    
+    cursor = conn.cursor(dictionary=True)
+    cursor.execute("""
+        SELECT token FROM deriv_accounts 
+        WHERE user_id = %s AND is_active = 1
+    """, (user_id,))
+    account = cursor.fetchone()
+    cursor.close()
+    conn.close()
+    
+    if not account:
+        return jsonify({'error': 'No Deriv account connected'}), 404
+    
+    api_token = account['token'].decode('utf-8') if isinstance(account['token'], bytes) else account['token']
+    
+    # Re-authorize with the selected account
+    result = {"success": False, "balance": None, "currency": None, "loginid": None, "error": None}
+    response_received = threading.Event()
+    
+    def on_message(ws, message):
+        data = json.loads(message)
+        print(f"📨 Switch Response: {data}")
+        
+        if data.get('authorize'):
+            # After successful authorization, get balance
+            ws.send(json.dumps({"balance": 1}))
+        
+        elif data.get('balance'):
+            result["success"] = True
+            result["balance"] = data['balance']['balance']
+            result["currency"] = data['balance']['currency']
+            result["loginid"] = data['balance']['loginid']
+            response_received.set()
+            ws.close()
+        
+        elif data.get('error'):
+            result["error"] = data['error']['message']
+            response_received.set()
+            ws.close()
+    
+    def on_error(ws, error):
+        result["error"] = str(error)
+        response_received.set()
+    
+    def on_open(ws):
+        # Re-authorize with the selected account
+        ws.send(json.dumps({
+            "authorize": api_token,
+            "account": new_account_id
+        }))
+    
+    ws_url = f"wss://ws.derivws.com/websockets/v3?app_id=1089"
+    ws = websocket.WebSocketApp(ws_url, on_open=on_open, on_message=on_message, on_error=on_error)
+    
+    wst = threading.Thread(target=ws.run_forever)
+    wst.daemon = True
+    wst.start()
+    
+    response_received.wait(timeout=15)
+    
+    try:
+        ws.close()
+    except:
+        pass
+    
+    if result["success"]:
+        # Update database with new account info
+        conn2 = db.get_connection()
+        if conn2:
+            cursor2 = conn2.cursor()
+            cursor2.execute("""
+                UPDATE deriv_accounts 
+                SET account_id = %s, account_type = %s, balance = %s, last_sync_at = NOW()
+                WHERE user_id = %s
+            """, (new_account_id, account_type, result['balance'], user_id))
+            conn2.commit()
+            cursor2.close()
+            conn2.close()
+        
+        return jsonify({
+            'message': f'Switched to account: {new_account_id}',
+            'account_id': new_account_id,
+            'account_type': account_type,
+            'balance': result['balance'],
+            'currency': result['currency']
+        }), 200
+    else:
+        return jsonify({'error': result['error'] or 'Failed to switch account'}), 500
 
 
 @deriv_bp.route('/place-trade', methods=['POST'])

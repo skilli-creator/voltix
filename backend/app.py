@@ -5,6 +5,8 @@ from flask_jwt_extended import JWTManager
 from config import Config
 from routes.auth_routes import auth_bp
 from routes.deriv_routes import deriv_bp
+from routes.dbot_routes import bot_bp   # Fixed import (was dbot_routes)
+
 
 # Create Flask app FIRST
 app = Flask(__name__)
@@ -20,6 +22,7 @@ jwt = JWTManager(app)
 # Register blueprints (AFTER app is created)
 app.register_blueprint(auth_bp, url_prefix='/api/auth')
 app.register_blueprint(deriv_bp, url_prefix='/api/deriv')
+app.register_blueprint(bot_bp, url_prefix='/api/bot')   # Moved INSIDE after app creation
 
 # Health check routes
 @app.route('/')

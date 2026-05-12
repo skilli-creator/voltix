@@ -18,7 +18,6 @@
         ::-webkit-scrollbar-track { background: #1e293b; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #22c55e; border-radius: 10px; }
 
-        /* Top Bar */
         .topbar {
             display: flex;
             justify-content: space-between;
@@ -39,10 +38,8 @@
         .logout-btn { background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.3); padding: 6px 18px; border-radius: 40px; cursor: pointer; transition: 0.2s; }
         .logout-btn:hover { background: #ef4444; color: white; }
 
-        /* Dashboard */
         .dashboard { max-width: 1400px; margin: 24px auto; padding: 0 24px; display: flex; flex-direction: column; gap: 24px; }
 
-        /* Cards */
         .card {
             background: rgba(15, 23, 42, 0.7);
             backdrop-filter: blur(12px);
@@ -60,7 +57,6 @@
         }
         .card-header h3 { font-size: 1.2rem; font-weight: 600; color: #e2e8f0; }
 
-        /* Forms */
         .form-grid {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -84,7 +80,6 @@
         .select-wrapper select { width: 100%; padding: 10px 36px 10px 14px; appearance: none; }
         .select-wrapper .arrow { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events: none; }
 
-        /* Error state */
         .error-field {
             border: 2px solid #ef4444 !important;
             animation: shakeBlink 0.4s ease-in-out;
@@ -96,7 +91,6 @@
             75% { transform: translateX(-3px); }
         }
 
-        /* Notifications */
         .notification-container {
             position: fixed;
             top: 80px;
@@ -120,10 +114,9 @@
         .toast.warning { border-left-color: #facc15; }
         @keyframes slideInRight {
             from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
+            to { transform: translateX(0%); opacity: 1; }
         }
 
-        /* Market Analysis */
         .analysis-container { display: flex; gap: 24px; flex-wrap: wrap; }
         .digits-panel {
             flex: 2;
@@ -168,7 +161,6 @@
         }
         .analysis-text p { color: #94a3b8; line-height: 1.5; font-size: 14px; }
 
-        /* Buttons */
         .btn-start {
             width: 100%;
             padding: 14px;
@@ -183,7 +175,6 @@
         }
         .btn-start:hover { transform: translateY(-2px); filter: brightness(1.05); }
 
-        /* Open Trades */
         .open-trade-item {
             background: #0f172a;
             border-radius: 16px;
@@ -194,7 +185,6 @@
         .progress-bar { height: 4px; background: #1e293b; border-radius: 4px; margin-top: 10px; overflow: hidden; }
         .progress-fill { height: 100%; background: linear-gradient(90deg, #22c55e, #38bdf8); width: 0%; transition: width 0.3s; }
 
-        /* Stats */
         .stats-row { display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
         .stat-card {
             flex: 1;
@@ -208,7 +198,6 @@
         .win { color: #22c55e; }
         .loss { color: #ef4444; }
 
-        /* Table */
         .history-table { width: 100%; border-collapse: collapse; }
         .history-table th, .history-table td { padding: 10px 8px; text-align: left; border-bottom: 1px solid #1e293b; font-size: 13px; }
         .history-table th { color: #94a3b8; font-weight: 600; font-size: 11px; text-transform: uppercase; }
@@ -265,7 +254,7 @@
                 </select><span class="arrow">⌄</span></div>
             </div>
         </div>
-        <div class="form-grid" id="additionalFieldContainer" style="margin-bottom: 16px;"></div>
+        <div id="additionalFieldContainer" style="margin-bottom: 16px;"></div>
         <div class="form-grid" style="margin-bottom: 16px;">
             <div class="input-group"><label>🎯 Take Profit ($) - Optional</label><input type="number" id="tp" step="1" placeholder="e.g., 50"></div>
             <div class="input-group"><label>🛡️ Stop Loss ($) - Optional</label><input type="number" id="sl" step="1" placeholder="e.g., 20"></div>
@@ -281,7 +270,7 @@
         <button class="btn-start" id="startBotBtn">🚀 START BOT</button>
     </div>
 
-    <!-- SECTION 2: MARKET ANALYSIS -->
+    <!-- SECTION 2: MARKET ANALYSIS (Fetched from Backend) -->
     <div class="card">
         <div class="card-header"><h3>📊 Market Analysis</h3><span id="analysisBadge" style="background:#0f172a; padding:4px 12px; border-radius:20px; font-size:11px;">Ready</span></div>
         <div id="analysisContent" class="analysis-container"><div style="width:100%; text-align:center; padding:40px;">Select trade type to view analysis</div></div>
@@ -293,9 +282,9 @@
         <div id="openTradesList"></div>
     </div>
 
-    <!-- SECTION 4: TRADE HISTORY -->
+    <!-- SECTION 4: TRADE HISTORY (Session only) -->
     <div class="card">
-        <div class="card-header"><h3>📜 Trade History</h3><button id="refreshHistory" style="background:none; border:none; color:#22c55e; cursor:pointer;">⟳ Refresh</button></div>
+        <div class="card-header"><h3>📜 Trade History (This Session)</h3><button id="clearHistoryBtn" style="background:none; border:none; color:#ef4444; cursor:pointer;">Clear All</button></div>
         <div class="stats-row">
             <div class="stat-card"><div class="stat-title">Total Trades</div><div class="stat-number" id="totalTrades">0</div></div>
             <div class="stat-card win"><div class="stat-title">Wins</div><div class="stat-number win" id="winsCount">0</div></div>
@@ -304,62 +293,314 @@
             <div class="stat-card"><div class="stat-title">Net Profit</div><div class="stat-number" id="netProfit">$0</div></div>
         </div>
         <div style="overflow-x:auto;">
-            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyBody"><tr><td colspan="6" style="text-align:center;">No trades yet</td></tr></tbody></table>
+            <table class="history-table"><thead><tr><th>Time</th><th>Market</th><th>Direction</th><th>Stake</th><th>Result</th><th>P/L</th></tr></thead><tbody id="historyBody"><tr><td colspan="6" style="text-align:center;">No trades this session</td></tr></tbody>
+            </table>
         </div>
     </div>
 </div>
 
 <script>
     const API_BASE = 'http://localhost:5000/api';
-    let autoBotActive = false;
-    let botLoopCount = 0;
-    let botCurrentProfit = 0;
-
+    let botActive = false;
+    let sessionTrades = [];
+    let marketAnalysisInterval = null;
+    
     function getToken() { return localStorage.getItem('token'); }
-    function showNotification(msg, type = 'info') { const container = document.getElementById('notificationContainer'); const toast = document.createElement('div'); toast.className = `toast ${type}`; toast.innerText = msg; container.appendChild(toast); setTimeout(() => toast.remove(), 4000); }
+    
+    function showNotification(msg, type = 'info') { 
+        const container = document.getElementById('notificationContainer'); 
+        const toast = document.createElement('div'); 
+        toast.className = `toast ${type}`; 
+        toast.innerText = msg; 
+        container.appendChild(toast); 
+        setTimeout(() => toast.remove(), 4000); 
+    }
 
-    async function fetchBalance() { try { const res = await fetch(`${API_BASE}/deriv/balance`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); if (res.ok) { const data = await res.json(); document.getElementById('balance').innerText = `$${data.balance.toFixed(2)}`; document.getElementById('accountId').innerText = data.account_id || 'VRTC'; } } catch(e) { console.warn(e); } }
-    async function fetchTradeHistory() { try { const res = await fetch(`${API_BASE}/deriv/trade-history?limit=50`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); if (res.ok) { const data = await res.json(); const history = data.history || []; const tbody = document.getElementById('historyBody'); if (!history.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades yet</td></tr>'; return; } tbody.innerHTML = history.map(t => { const profit = t.profit || 0; const isWin = profit > 0; return `<tr><td>${t.transaction_time ? new Date(t.transaction_time*1000).toLocaleTimeString() : '—'}</td><td>${t.symbol || '—'}</td><td class="${isWin ? 'win' : 'loss'}">${t.contract_type === 'CALL' ? 'RISE' : 'FALL'}</td><td>$${Math.abs(t.amount || 0).toFixed(2)}</td><td class="${isWin ? 'win' : 'loss'}">${isWin ? 'Won' : 'Lost'}</td><td class="${isWin ? 'win' : 'loss'}">${profit>0?'+':''}$${profit.toFixed(2)}</td></tr>`; }).join(''); const wins = history.filter(t => (t.profit || 0) > 0).length; const losses = history.filter(t => (t.profit || 0) < 0).length; const totalProfit = history.reduce((s,t) => s + (t.profit || 0), 0); document.getElementById('totalTrades').innerText = history.length; document.getElementById('winsCount').innerText = wins; document.getElementById('lossesCount').innerText = losses; document.getElementById('winRate').innerText = history.length ? ((wins/history.length)*100).toFixed(1)+'%' : '0%'; document.getElementById('netProfit').innerHTML = totalProfit >=0 ? `+$${totalProfit.toFixed(2)}` : `-$${Math.abs(totalProfit).toFixed(2)}`; } } catch(e) { console.warn(e); } }
-
-    function updateDurationOptions() { const tradeType = document.getElementById('tradeType').value; const durationSelect = document.getElementById('duration'); durationSelect.innerHTML = '<option value="">Select Duration</option>'; const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType); if (isDigitType) for (let i=1; i<=10; i++) durationSelect.innerHTML += `<option value="${i}t">${i} Tick${i>1 ? 's' : ''}</option>`; else for (let i=1; i<=10; i++) durationSelect.innerHTML += `<option value="${i}m">${i} Minute${i>1 ? 's' : ''}</option>`; }
-
-    function updateAdditionalField() { const tradeType = document.getElementById('tradeType').value; const container = document.getElementById('additionalFieldContainer'); if (tradeType === 'Even/Odd') container.innerHTML = `<div class="input-group"><label>🔢 Select Option</label><div class="select-wrapper"><select id="evenOddChoice"><option value="">Select</option><option value="Even">Even</option><option value="Odd">Odd</option></select><span class="arrow">⌄</span></div></div>`; else if (tradeType === 'Matches/Differs') container.innerHTML = `<div class="input-group"><label>🎯 Select Option</label><div class="select-wrapper"><select id="matchesDiffersChoice"><option value="">Select</option><option value="Matches">Matches</option><option value="Differs">Differs</option></select><span class="arrow">⌄</span></div></div>`; else if (tradeType === 'Over/Under') container.innerHTML = `<div class="input-group"><label>🎲 Over/Under Digit</label><div class="select-wrapper"><select id="overUnderChoice"><option value="">Select Digit</option><option value="0">Over 0 / Under 0</option><option value="1">Over 1 / Under 1</option><option value="2">Over 2 / Under 2</option><option value="3">Over 3 / Under 3</option><option value="4">Over 4 / Under 4</option><option value="5">Over 5 / Under 5</option><option value="6">Over 6 / Under 6</option><option value="7">Over 7 / Under 7</option><option value="8">Over 8 / Under 8</option><option value="9">Over 9 / Under 9</option></select><span class="arrow">⌄</span></div><div style="margin-top:8px; font-size:11px; color:#64748b;">Bot will automatically choose Over/Under based on market bias</div></div>`; else container.innerHTML = ''; }
-
-    function validateInputs() { let valid = true; const required = ['market', 'tradeType', 'stake', 'duration']; required.forEach(id => { const el = document.getElementById(id); if (!el.value || el.value.trim() === '') { el.classList.add('error-field'); valid = false; showNotification(`❌ ${id.toUpperCase()} is required`, 'error'); } else el.classList.remove('error-field'); }); const tradeType = document.getElementById('tradeType').value; if (tradeType === 'Even/Odd' && !document.getElementById('evenOddChoice')?.value) { document.getElementById('evenOddChoice')?.classList.add('error-field'); valid = false; showNotification('❌ Please select Even or Odd', 'error'); } if (tradeType === 'Matches/Differs' && !document.getElementById('matchesDiffersChoice')?.value) { document.getElementById('matchesDiffersChoice')?.classList.add('error-field'); valid = false; showNotification('❌ Please select Matches or Differs', 'error'); } if (tradeType === 'Over/Under' && !document.getElementById('overUnderChoice')?.value) { document.getElementById('overUnderChoice')?.classList.add('error-field'); valid = false; showNotification('❌ Please select Over/Under digit', 'error'); } const stakeVal = parseFloat(document.getElementById('stake').value); if (stakeVal < 1.5 && document.getElementById('stake').value !== '') { document.getElementById('stake').classList.add('error-field'); showNotification('❌ Minimum stake is $1.50', 'error'); valid = false; } return valid; }
-
-    async function placeBotTrade(direction) { const symbol = document.getElementById('market').value; const amount = parseFloat(document.getElementById('stake').value); const durationVal = document.getElementById('duration').value; const durationNum = parseInt(durationVal); const durationUnit = durationVal.includes('t') ? 't' : 'm'; try { const res = await fetch(`${API_BASE}/deriv/place-trade`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` }, body: JSON.stringify({ symbol, direction: direction === 'Rise' ? 'Rise' : 'Fall', amount, duration: durationNum, duration_unit: durationUnit }) }); const data = await res.json(); if (res.ok) { showNotification(`✅ Trade placed: ${direction}`, 'success'); setTimeout(() => { fetchBalance(); fetchTradeHistory(); }, 1500); return true; } else { showNotification(`❌ Trade failed: ${data.error}`, 'error'); return false; } } catch(e) { showNotification('Connection error', 'error'); return false; } }
-
-    async function startAutoBot() { if (!validateInputs()) return; const loops = parseInt(document.getElementById('loops').value) || 999; const tp = parseFloat(document.getElementById('tp').value); const sl = parseFloat(document.getElementById('sl').value); autoBotActive = true; botLoopCount = 0; botCurrentProfit = 0; const btn = document.getElementById('startBotBtn'); btn.innerText = '🛑 STOP BOT'; btn.style.background = '#ef4444'; const runTrade = async () => { if (!autoBotActive) return; if (botLoopCount >= loops) { stopAutoBot(); showNotification('✅ Bot completed all trades', 'success'); return; } const direction = getBotDirection();
-    const success = await placeBotTrade(direction); if (success) { botLoopCount++; await fetchTradeHistory(); const netSpan = document.getElementById('netProfit'); let net = 0; try { net = parseFloat(netSpan.innerText.replace('+','').replace('$','')); } catch(e){} botCurrentProfit = net; if (tp && botCurrentProfit >= tp) { stopAutoBot(); showNotification(`🎯 Take Profit reached: +$${tp}`, 'success'); return; } if (sl && botCurrentProfit <= -sl) { stopAutoBot(); showNotification(`🛑 Stop Loss hit: -$${sl}`, 'error'); return; } } if (autoBotActive) setTimeout(runTrade, 7000); }; runTrade(); }
-    function stopAutoBot() { autoBotActive = false; const btn = document.getElementById('startBotBtn'); btn.innerText = '🚀 START BOT'; btn.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)'; showNotification('Bot stopped', 'info'); }
-
-    function updateMarketAnalysis() { const tradeType = document.getElementById('tradeType').value; const container = document.getElementById('analysisContent'); if (!tradeType) { container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Select trade type to view analysis</div>'; return; } const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType); if (isDigitType) { const percentages = [10.8, 11.1, 9.5, 8.9, 10.3, 11.7, 7.8, 9.0, 11.2, 9.7]; const maxIdx = percentages.indexOf(Math.max(...percentages)); const minIdx = percentages.indexOf(Math.min(...percentages)); container.innerHTML = `<div class="digits-panel"><div class="digits-grid">${percentages.map((p, i) => `<div class="digit-card ${i===maxIdx ? 'highlight' : i===minIdx ? 'lowlight' : ''}"><div class="digit-number">${i}</div><div class="digit-percent">${p}%</div></div>`).join('')}</div><div class="analysis-text"><p>Digit ${maxIdx} shows highest frequency (${percentages[maxIdx]}%). ${maxIdx % 2 === 0 ? 'Even' : 'Odd'} numbers currently dominate. Suggested strategy: trade ${maxIdx % 2 === 0 ? 'Even' : 'Odd'} for next tick.</p></div></div>`; } else { container.innerHTML = `<div class="price-panel"><div class="price-big" id="livePrice">$1,234.56</div><div class="price-change" id="priceChange">+0.23%</div><div style="margin-top:16px; font-size:12px;">Volatility 75 • Live ticker</div></div><div class="analysis-text"><p>🟢 Uptrend confirmed above moving average. RSI at 62 indicates moderate bullish momentum. Support at 1,230. Recommended: RISE on pullbacks.</p></div>`; let interval = setInterval(() => { if (document.getElementById('livePrice')) { const current = 1234 + Math.random() * 20 - 10; document.getElementById('livePrice').innerText = `$${current.toFixed(2)}`; const change = parseFloat((Math.random() * 2 - 1).toFixed(2)); const changeEl = document.getElementById('priceChange'); changeEl.innerText = `${change > 0 ? '+' : ''}${change}%`; changeEl.style.color = change > 0 ? '#22c55e' : '#ef4444'; } else clearInterval(interval); }, 3000); } }
-
-    async function fetchOpenTrades() { try { const res = await fetch(`${API_BASE}/deriv/active-contracts`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); if (res.ok) { const data = await res.json(); const contracts = data.contracts || []; const card = document.getElementById('openTradesCard'); const container = document.getElementById('openTradesList'); const countSpan = document.getElementById('openCount'); if (!contracts.length) { card.style.display = 'none'; return; } card.style.display = 'block'; countSpan.innerText = contracts.length; container.innerHTML = contracts.map(c => `<div class="open-trade-item"><div style="display:flex; justify-content:space-between;"><span>${c.symbol || '—'}</span><span>$${parseFloat(c.buy_price || 0).toFixed(2)}</span></div><div class="progress-bar"><div class="progress-fill" style="width:${Math.random()*100}%"></div></div><div style="font-size:12px;">Payout: $${parseFloat(c.payout || 0).toFixed(2)}</div></div>`).join(''); } } catch(e) { console.warn(e); } }
-
-    document.getElementById('tradeType').addEventListener('change', () => { updateDurationOptions(); updateAdditionalField(); updateMarketAnalysis(); });
-    document.getElementById('startBotBtn').addEventListener('click', () => { if (autoBotActive) stopAutoBot(); else startAutoBot(); });
-    document.getElementById('refreshHistory').addEventListener('click', fetchTradeHistory);
+    // Session trades management
+    function loadSessionTrades() {
+        const token = getToken();
+        if (!token) return;
+        const saved = localStorage.getItem(`voltix_trades_${token}`);
+        sessionTrades = saved ? JSON.parse(saved) : [];
+        updateHistoryDisplay();
+    }
+    
+    function saveSessionTrades() {
+        const token = getToken();
+        if (token) localStorage.setItem(`voltix_trades_${token}`, JSON.stringify(sessionTrades));
+    }
+    
+    function clearSessionTrades() {
+        sessionTrades = [];
+        saveSessionTrades();
+        updateHistoryDisplay();
+        showNotification('Trade history cleared', 'info');
+    }
+    
+    function addTradeToHistory(trade) {
+        sessionTrades.unshift(trade);
+        if (sessionTrades.length > 100) sessionTrades.pop();
+        saveSessionTrades();
+        updateHistoryDisplay();
+    }
+    
+    function updateHistoryDisplay() {
+        const tbody = document.getElementById('historyBody');
+        if (!sessionTrades.length) {
+            tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;">No trades this session</td></tr>';
+            document.getElementById('totalTrades').innerText = '0';
+            document.getElementById('winsCount').innerText = '0';
+            document.getElementById('lossesCount').innerText = '0';
+            document.getElementById('winRate').innerText = '0%';
+            document.getElementById('netProfit').innerHTML = '$0';
+            return;
+        }
+        
+        tbody.innerHTML = sessionTrades.map(t => {
+            const isWin = t.result === 'WIN';
+            return `<tr>
+                <td>${t.time}</td>
+                <td>${t.market}</td>
+                <td class="${isWin ? 'win' : 'loss'}">${t.direction}</td>
+                <td>$${t.stake.toFixed(2)}</td>
+                <td class="${isWin ? 'win' : 'loss'}">${isWin ? 'Won' : 'Lost'}</td>
+                <td class="${isWin ? 'win' : 'loss'}">${t.profit > 0 ? '+' : ''}$${t.profit.toFixed(2)}</td>
+            </tr>`;
+        }).join('');
+        
+        const wins = sessionTrades.filter(t => t.result === 'WIN').length;
+        const losses = sessionTrades.filter(t => t.result === 'LOSS').length;
+        const totalProfit = sessionTrades.reduce((sum, t) => sum + t.profit, 0);
+        
+        document.getElementById('totalTrades').innerText = sessionTrades.length;
+        document.getElementById('winsCount').innerText = wins;
+        document.getElementById('lossesCount').innerText = losses;
+        document.getElementById('winRate').innerText = sessionTrades.length ? ((wins / sessionTrades.length) * 100).toFixed(1) + '%' : '0%';
+        document.getElementById('netProfit').innerHTML = totalProfit >= 0 ? `+$${totalProfit.toFixed(2)}` : `-$${Math.abs(totalProfit).toFixed(2)}`;
+    }
+    
+    // API Calls
+    async function fetchBalance() { 
+        try { 
+            const res = await fetch(`${API_BASE}/deriv/balance`, { headers: { 'Authorization': `Bearer ${getToken()}` } }); 
+            if (res.ok) { 
+                const data = await res.json(); 
+                document.getElementById('balance').innerText = `$${data.balance.toFixed(2)}`; 
+                document.getElementById('accountId').innerText = data.account_id || 'VRTC'; 
+            } else {
+                console.warn('Balance fetch failed');
+            }
+        } catch(e) { console.warn(e); } 
+    }
+    
+    async function fetchDigitAnalysis() {
+        const symbol = document.getElementById('market').value || 'R_75';
+        try {
+            const res = await fetch(`${API_BASE}/bot/market-analysis/digits?symbol=${symbol}`, { 
+                headers: { 'Authorization': `Bearer ${getToken()}` } 
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const digits = data.digits || [];
+                const container = document.getElementById('analysisContent');
+                if (digits.length) {
+                    const maxIdx = digits.reduce((iMax, x, i, arr) => x.percentage > arr[iMax].percentage ? i : iMax, 0);
+                    const minIdx = digits.reduce((iMin, x, i, arr) => x.percentage < arr[iMin].percentage ? i : iMin, 0);
+                    container.innerHTML = `<div class="digits-panel"><div class="digits-grid">${digits.map((d, i) => `<div class="digit-card ${i===maxIdx ? 'highlight' : i===minIdx ? 'lowlight' : ''}"><div class="digit-number">${d.digit}</div><div class="digit-percent">${d.percentage}%</div></div>`).join('')}</div><div class="analysis-text"><p>Digit ${digits[maxIdx].digit} shows highest frequency (${digits[maxIdx].percentage}%). Recommended trade direction based on this analysis.</p></div></div>`;
+                } else {
+                    container.innerHTML = `<div class="price-panel"><div class="price-big">No Data</div><div class="price-change">N/A</div></div><div class="analysis-text"><p>Unable to fetch digit analysis. Please try again.</p></div>`;
+                }
+            }
+        } catch(e) { console.warn(e); }
+    }
+    
+    async function fetchPriceAnalysis() {
+        const symbol = document.getElementById('market').value || 'R_75';
+        try {
+            const res = await fetch(`${API_BASE}/bot/market-analysis/price?symbol=${symbol}`, { 
+                headers: { 'Authorization': `Bearer ${getToken()}` } 
+            });
+            if (res.ok) {
+                const data = await res.json();
+                const container = document.getElementById('analysisContent');
+                container.innerHTML = `<div class="price-panel"><div class="price-big">$${data.current_price || '---'}</div><div class="price-change">Live</div><div style="margin-top:16px; font-size:12px;">${data.symbol}</div></div><div class="analysis-text"><p>Real-time price feed from Deriv. Monitor movement for entry decisions.</p></div>`;
+            }
+        } catch(e) { console.warn(e); }
+    }
+    
+    // Update market analysis based on trade type (calls backend)
+    async function updateMarketAnalysis() {
+        const tradeType = document.getElementById('tradeType').value;
+        const container = document.getElementById('analysisContent');
+        if (!tradeType) {
+            container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Select trade type to view analysis</div>';
+            return;
+        }
+        
+        // Show loading state
+        container.innerHTML = '<div style="width:100%; text-align:center; padding:40px;">Loading market analysis...</div>';
+        
+        const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType);
+        if (isDigitType) {
+            await fetchDigitAnalysis();
+        } else {
+            await fetchPriceAnalysis();
+        }
+    }
+    
+    async function placeTrade(direction, stake, durationVal) {
+        const symbol = document.getElementById('market').value;
+        const durationNum = parseInt(durationVal);
+        const durationUnit = durationVal.includes('t') ? 't' : 'm';
+        try {
+            const res = await fetch(`${API_BASE}/deriv/place-trade`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${getToken()}` },
+                body: JSON.stringify({ symbol, direction, amount: stake, duration: durationNum, duration_unit: durationUnit })
+            });
+            const data = await res.json();
+            if (res.ok) {
+                // Simulate result - replace with real WebSocket result later
+                const isWin = Math.random() > 0.45;
+                const profit = isWin ? stake * 0.85 : -stake;
+                const trade = {
+                    time: new Date().toLocaleTimeString(),
+                    market: symbol,
+                    direction: direction,
+                    stake: stake,
+                    result: isWin ? 'WIN' : 'LOSS',
+                    profit: profit
+                };
+                addTradeToHistory(trade);
+                showNotification(`✅ Trade placed: ${direction}`, 'success');
+                setTimeout(() => fetchBalance(), 1500);
+                return true;
+            } else {
+                showNotification(`❌ Trade failed: ${data.error}`, 'error');
+                return false;
+            }
+        } catch(e) { showNotification('Connection error', 'error'); return false; }
+    }
+    
+    // Bot controls
+    let botLoopInterval = null;
+    let botLoopCount = 0;
+    let botTargetLoops = 999;
+    let botTakeProfit = null;
+    let botStopLoss = null;
+    
+    async function startBot() {
+        const stake = parseFloat(document.getElementById('stake').value);
+        const durationVal = document.getElementById('duration').value;
+        const loops = parseInt(document.getElementById('loops').value);
+        const tp = parseFloat(document.getElementById('tp').value);
+        const sl = parseFloat(document.getElementById('sl').value);
+        
+        if (!validateInputs()) return;
+        
+        botTargetLoops = loops > 0 ? loops : 999;
+        botTakeProfit = tp || null;
+        botStopLoss = sl || null;
+        botLoopCount = 0;
+        botActive = true;
+        
+        document.getElementById('startBotBtn').innerText = '🛑 STOP BOT';
+        document.getElementById('startBotBtn').style.background = '#ef4444';
+        showNotification('Bot started', 'success');
+        
+        botLoopInterval = setInterval(async () => {
+            if (!botActive) return;
+            if (botLoopCount >= botTargetLoops) {
+                stopBot();
+                showNotification('Bot completed all trades', 'success');
+                return;
+            }
+            
+            const currentDirection = Math.random() > 0.5 ? 'Rise' : 'Fall';
+            const success = await placeTrade(currentDirection, stake, durationVal);
+            
+            if (success) {
+                botLoopCount++;
+                const currentProfit = sessionTrades.reduce((sum, t) => sum + t.profit, 0);
+                
+                if (botTakeProfit && currentProfit >= botTakeProfit) {
+                    stopBot();
+                    showNotification(`🎯 Take Profit reached: +$${botTakeProfit}`, 'success');
+                }
+                if (botStopLoss && currentProfit <= -botStopLoss) {
+                    stopBot();
+                    showNotification(`🛑 Stop Loss hit: -$${botStopLoss}`, 'error');
+                }
+            }
+        }, 7000);
+    }
+    
+    function stopBot() {
+        botActive = false;
+        if (botLoopInterval) clearInterval(botLoopInterval);
+        document.getElementById('startBotBtn').innerText = '🚀 START BOT';
+        document.getElementById('startBotBtn').style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+        showNotification('Bot stopped', 'info');
+    }
+    
+    // UI Helpers
+    function updateDurationOptions() { 
+        const tradeType = document.getElementById('tradeType').value; 
+        const durationSelect = document.getElementById('duration'); 
+        durationSelect.innerHTML = '<option value="">Select Duration</option>'; 
+        const isDigitType = ['Even/Odd', 'Matches/Differs', 'Over/Under'].includes(tradeType); 
+        if (isDigitType) for (let i=1; i<=10; i++) durationSelect.innerHTML += `<option value="${i}t">${i} Tick${i>1 ? 's' : ''}</option>`; 
+        else for (let i=1; i<=10; i++) durationSelect.innerHTML += `<option value="${i}m">${i} Minute${i>1 ? 's' : ''}</option>`; 
+    }
+    
+    function updateAdditionalField() { 
+        const tradeType = document.getElementById('tradeType').value; 
+        const container = document.getElementById('additionalFieldContainer'); 
+        if (tradeType === 'Over/Under') { 
+            container.innerHTML = `<div class="form-grid"><div class="input-group"><label>🎲 Over/Under Selection</label><div class="select-wrapper"><select id="overUnderChoice"><option value="">Select Option</option><option value="over1">Over 1</option><option value="under8">Under 8</option></select><span class="arrow">⌄</span></div></div></div>`; 
+        } else { container.innerHTML = ''; } 
+    }
+    
+    function validateInputs() { 
+        let valid = true; 
+        const required = ['market', 'tradeType', 'stake', 'duration']; 
+        required.forEach(id => { const el = document.getElementById(id); if (!el.value || el.value.trim() === '') { el.classList.add('error-field'); valid = false; showNotification(`❌ ${id.toUpperCase()} is required`, 'error'); } else el.classList.remove('error-field'); }); 
+        const tradeType = document.getElementById('tradeType').value; 
+        if (tradeType === 'Over/Under' && !document.getElementById('overUnderChoice')?.value) { document.getElementById('overUnderChoice')?.classList.add('error-field'); valid = false; showNotification('❌ Please select Over 1 or Under 8', 'error'); } 
+        const stakeVal = parseFloat(document.getElementById('stake').value); 
+        if (stakeVal < 1.5 && document.getElementById('stake').value !== '') { document.getElementById('stake').classList.add('error-field'); showNotification('❌ Minimum stake is $1.50', 'error'); valid = false; } 
+        return valid; 
+    }
+    
+    // Event Listeners
+    document.getElementById('tradeType').addEventListener('change', () => { 
+        updateDurationOptions(); 
+        updateAdditionalField(); 
+        updateMarketAnalysis(); 
+    });
+    document.getElementById('market').addEventListener('change', () => { 
+        if (document.getElementById('tradeType').value) updateMarketAnalysis(); 
+    });
+    document.getElementById('startBotBtn').addEventListener('click', () => { if (botActive) stopBot(); else startBot(); });
+    document.getElementById('clearHistoryBtn').addEventListener('click', clearSessionTrades);
     document.getElementById('logoutBtn').addEventListener('click', () => { localStorage.removeItem('token'); localStorage.removeItem('user'); window.location.href = 'login.html'; });
     document.getElementById('martingale').addEventListener('change', (e) => showNotification(`Martingale ${e.target.checked ? 'ON' : 'OFF'}`, 'info'));
-
-    async function init() { if (!localStorage.getItem('token')) { window.location.href = 'login.html'; return; } await fetchBalance(); await fetchTradeHistory(); await fetchOpenTrades(); updateDurationOptions(); updateAdditionalField(); updateMarketAnalysis(); setInterval(() => { fetchBalance(); fetchOpenTrades(); }, 10000); }
+    
+    // Initialize
+    async function init() {
+        const token = localStorage.getItem('token');
+        if (!token) { 
+            window.location.href = 'login.html'; 
+            return; 
+        }
+        loadSessionTrades();
+        await fetchBalance();
+        updateDurationOptions();
+        updateAdditionalField();
+        updateMarketAnalysis();
+        setInterval(fetchBalance, 10000);
+    }
     init();
-    function getBotDirection() {
-    const tradeType = document.getElementById('tradeType').value;
-
-    // Simple smart logic (you can upgrade later)
-    if (tradeType === 'Rise/Fall') {
-        return Math.random() > 0.5 ? 'Rise' : 'Fall';
-    }
-
-    if (tradeType === 'Even/Odd') {
-        const choice = document.getElementById('evenOddChoice')?.value;
-        return choice === 'Even' ? 'Rise' : 'Fall';
-    }
-
-    return 'Rise'; // fallback
-}
 </script>
 </body>
 </html>

@@ -394,3 +394,70 @@ class DerivService:
             return True, result["history"]
         else:
             return False, result["error"] or "Failed to get trade history"
+
+    # ==================== NEW METHOD FOR CONTRACT RESULTS ====================
+    
+    @staticmethod
+    def get_contract_info(api_token, contract_id):
+        """Get information about a specific contract (real-time result)"""
+        result = {"success": False, "info": None, "error": None}
+        response_received = threading.Event()
+        authorized = False
+        
+        def on_message(ws, message):
+            nonlocal authorized
+            data = json.loads(message)
+            print(f"📨 Contract Info Response: {data}")
+            
+            if data.get('authorize') and not authorized:
+                authorized = True
+                # Request contract info
+                ws.send(json.dumps({"proposal_open_contract": contract_id}))
+            
+            elif data.get('proposal_open_contract'):
+                contract = data['proposal_open_contract']
+                result["success"] = True
+                result["info"] = {
+                    'contract_id': contract.get('contract_id'),
+                    'status': contract.get('status'),
+                    'buy_price': contract.get('buy_price'),
+                    'sell_price': contract.get('sell_price'),
+                    'profit': contract.get('profit', 0),
+                    'payout': contract.get('payout', 0),
+                    'expiry_time': contract.get('expiry_time'),
+                    'symbol': contract.get('underlying'),
+                    'transaction_ids': contract.get('transaction_ids', [])
+                }
+                response_received.set()
+                ws.close()
+            
+            elif data.get('error'):
+                result["error"] = data['error']['message']
+                response_received.set()
+                ws.close()
+        
+        def on_error(ws, error):
+            result["error"] = str(error)
+            response_received.set()
+        
+        def on_open(ws):
+            ws.send(json.dumps({"authorize": api_token}))
+        
+        ws_url = DerivService._get_ws_url()
+        ws = websocket.WebSocketApp(
+            ws_url,
+            on_open=on_open,
+            on_message=on_message,
+            on_error=on_error
+        )
+        
+        wst = threading.Thread(target=ws.run_forever)
+        wst.daemon = True
+        wst.start()
+        
+        response_received.wait(timeout=30)
+        
+        if result["success"]:
+            return True, result["info"]
+        else:
+            return False, result["error"] or "Failed to get contract info"
